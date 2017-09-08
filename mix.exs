@@ -28,9 +28,10 @@ defmodule Bow.Mixfile do
 
   defp deps do
     [
-      {:plug,     ">= 1.0.0"},
+      {:plug,     "~> 1.0"},
       # {:erlexec,  "~> 1.7.0", optional: true},
-      {:ecto,     ">= 2.0.0", optional: true},
+      {:ecto,     "~> 2.0", optional: true},
+      {:ex_aws,   "~> 1.0", optional: true},
 
       # testing & docs
       {:postgrex,       ">= 0.0.0",  only: :test},
