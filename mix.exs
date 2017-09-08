@@ -7,7 +7,8 @@ defmodule Bow.Mixfile do
       version: "0.1.0",
       elixir: "~> 1.5",
       start_permanent: Mix.env == :prod,
-      deps: deps()
+      deps: deps(),
+      test_coverage: [tool: Coverex.Task]
     ]
   end
 
@@ -21,8 +22,15 @@ defmodule Bow.Mixfile do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
+      {:plug,     ">= 1.0.0"},
+      # {:erlexec,  "~> 1.7.0", optional: true},
+      {:ecto,     ">= 2.0.0", optional: true},
+
+      # testing & docs
+      {:coverex,        "~> 1.4.10", only: :test},
+      {:ex_doc,         "~> 0.16.1", only: :dev},
+      {:mix_test_watch, "~> 0.5.0",  only: :dev},
+      {:dialyxir,       "~> 0.5.1",  only: :dev}
     ]
   end
 end
