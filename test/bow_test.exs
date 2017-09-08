@@ -129,6 +129,16 @@ defmodule BowTest do
       file = MinimalUploader.new(name: "nope.gif")
       assert {:error, _} = Bow.load(file)
     end
+
+    test "#delete" do
+      # store it first
+      MinimalUploader.new(path: @file_cat) |> Bow.store()
+
+      # then test delete
+      file = MinimalUploader.new(name: "cat.jpg")
+      assert :ok = Bow.delete(file)
+      assert File.exists?("tmp/bow/minimal/cat.jpg") == false
+    end
   end
 
   describe "Generate thumbs" do
@@ -366,6 +376,8 @@ defmodule BowTest do
       ]}
     end
   end
+
+
   #   import Mock
   #
   #   test_with_mock "remote_file_url handling", Bow.Download, [

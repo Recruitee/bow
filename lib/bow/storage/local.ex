@@ -1,10 +1,7 @@
 defmodule Bow.Storage.Local do
-  # --
-  defp prefix, do: Keyword.get(Application.get_env(:recruitee, :bow, []), :storage_prefix, "tmp/bow")
-  # uncomment the following line after extracting bow to separate application
-  # defp prefix, do: Application.get_env(:bow, :storage_prefix, "tmp/bow")
-  # --
+  @behaviour Bow.Storage
 
+  defp prefix, do: Application.get_env(:bow, :storage_prefix, "tmp/bow")
 
   def store(file_path, dir, name, _opts) do
     dir   = Path.join([prefix(), dir])
@@ -16,11 +13,21 @@ defmodule Bow.Storage.Local do
     :ok
   end
 
-  def load(dir, name) do
+  def load(dir, name, _opts) do
     # no need to download this file - just point to directly
     path = Path.join([prefix(), dir, name])
     if File.exists?(path) do
       {:ok, path}
+    else
+      {:error, :file_not_found}
+    end
+  end
+
+  def delete(dir, name, _opts) do
+    path = Path.join([prefix(), dir, name])
+    if File.exists?(path) do
+      File.rm(path)
+      :ok
     else
       {:error, :file_not_found}
     end

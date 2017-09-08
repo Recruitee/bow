@@ -26,6 +26,8 @@ defmodule Bow do
             uploader: atom
   }
 
+  @typep opts :: keyword
+
   @enforce_keys [:name, :rootname, :ext]
   defstruct name:     "",
             rootname: "",
@@ -42,49 +44,63 @@ defmodule Bow do
   @doc """
   Process & store given file with its uploader
   """
-  @spec store(t) :: {:ok, t} | {:error, any}
-  def store(file) do
+  @spec store(t, opts) :: {:ok, t} | {:error, any}
+  def store(file, opts \\ []) do
     uploader = file.uploader
     versions = uploader.versions(file)
 
-    make(uploader, file, file, versions) |> combine_results
+    make(uploader, file, file, versions, opts) |> combine_results
   end
 
 
   @doc """
   Load given file
   """
-  @spec load(t) :: {:ok, t} | {:error, any}
-  def load(file) do
-    with {:ok, path} <- load_file(file.uploader, file) do
+  @spec load(t, opts) :: {:ok, t} | {:error, any}
+  def load(file, opts \\ []) do
+    with {:ok, path} <- load_file(file.uploader, file, opts) do
       {:ok, %{file | path: path}}
     end
+  end
+
+  @doc """
+  Delete all versions of given file
+  """
+  @spec delete(t, opts) :: :ok
+  def delete(file, opts \\ []) do
+    uploader = file.uploader
+    for version <- uploader.versions(file) do
+      name = uploader.filename(file, version)
+      delete_file(uploader, set(file, :name, name), opts)
+    end
+
+    :ok
   end
 
   def regenerate(file) do
     file |> load |> store
   end
 
-  defp make(up, f0, fx, versions) when is_list(versions) do
+  defp make(up, f0, fx, versions, opts) when is_list(versions) do
     versions
-    |> Enum.map(&Task.async(fn -> make(up, f0, fx, &1) end))
+    |> Enum.map(&Task.async(fn -> make(up, f0, fx, &1, opts) end))
     |> Enum.map(&Task.await(&1, version_timeout()))
     |> List.flatten
   end
 
-  defp make(up, f0, fx, version) do
+  defp make(up, f0, fx, version, opts) do
     fy = fx
       |> set(:name, up.filename(f0, version))
       |> set(:path, nil)
 
     case up.transform(fx, fy, version) do
       {:ok, fy, next_versions} ->
-        res0 = Task.async(fn -> store_file(up, fy) end)
-        res1 = make(up, f0, fy, next_versions)
+        res0 = Task.async(fn -> store_file(up, fy, opts) end)
+        res1 = make(up, f0, fy, next_versions, opts)
         [{version, Task.await(res0, store_timeout())} | res1]
 
       {:ok, fy} ->
-        [{version, store_file(up, fy)}]
+        [{version, store_file(up, fy, opts)}]
 
       :ok ->
         [{version, {:ok, :no_store}}]
@@ -94,19 +110,28 @@ defmodule Bow do
     end
   end
 
-  defp store_file(uploader, file) do
+  defp store_file(uploader, file, opts) do
     storage().store(
       file.path,
       uploader.store_dir(file),
       file.name,
-      uploader.store_options(file)
+      opts ++ uploader.store_options(file)
     )
   end
 
-  defp load_file(uploader, file) do
+  defp load_file(uploader, file, opts) do
     storage().load(
       uploader.store_dir(file),
-      file.name
+      file.name,
+      opts
+    )
+  end
+
+  defp delete_file(uploader, file, opts) do
+    storage().delete(
+      uploader.store_dir(file),
+      file.name,
+      opts
     )
   end
 

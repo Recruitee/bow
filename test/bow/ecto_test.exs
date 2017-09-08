@@ -75,7 +75,7 @@ defmodule Bow.EctoTest do
         Bow.set(file, :rootname, "avatar_#{ts}")
       end
 
-      def store_dir(file), do: "timestamp"
+      def store_dir(_file), do: "timestamp"
     end
   end
 
