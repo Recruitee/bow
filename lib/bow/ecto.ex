@@ -128,7 +128,8 @@ defmodule Bow.Ecto do
   @spec validate(Ecto.Changeset.t) :: Ecto.Changeset.t
   def validate(%Ecto.Changeset{} = changeset) do
     changeset
-    |> extract_uploads()
+    |> extract_files()
+    |> filter_uploads()
     |> Enum.reduce(changeset, &validate_upload/2)
   end
 
@@ -229,6 +230,23 @@ defmodule Bow.Ecto do
   end
 
 
+  @doc """
+  Delete record files from storage
+
+  Example
+      user = Repo.get(...)
+
+      user
+      |> Repo.delete!()
+      |> Bow.Ecto.delete()
+
+  """
+  @spec delete(Ecto.Schema.t) :: {:ok, Ecto.Schema.t} | {:error, any}
+  def delete(record) do
+    with {:ok, _} <- do_delete(record) do
+      {:ok, record}
+    end
+  end
 
   defp validate_upload({field, file}, changeset) do
     case file.uploader.validate(file) do
@@ -241,25 +259,33 @@ defmodule Bow.Ecto do
 
   defp do_store(record) do
     record
-    |> extract_uploads()
+    |> extract_files()
+    |> filter_uploads()
     |> Enum.map(&store_upload(&1, record))
     |> Bow.combine_results()
   end
 
   defp store_upload({field, file}, record), do: {field, Bow.store(%{file | scope: record})}
 
-  defp extract_uploads(%Ecto.Changeset{} = changeset) do
-    changeset.changes
-    |> Enum.filter(&upload?/1)
-  end
-  defp extract_uploads(record) do
+  def do_delete(record) do
     record
-    |> Map.from_struct
-    |> Enum.filter(&upload?/1)
+    |> extract_files()
+    |> Enum.map(&delete_upload(&1, record))
+    |> Bow.combine_results()
   end
 
-  defp upload?({_, %Bow{path: path}}) when not is_nil(path), do: true
-  defp upload?(_), do: false
+  defp delete_upload({field, file}, record), do: {field, Bow.delete(%{file | scope: record})}
+
+  defp extract_files(%Ecto.Changeset{changes: changes}), do: filter_files(changes)
+  defp extract_files(record), do: record |> Map.from_struct() |> filter_files()
+
+  defp filter_files(fields), do: Enum.filter(fields, &file?/1)
+  defp filter_uploads(files), do: Enum.filter(files, &upload?/1)
+
+  defp file?({_, %Bow{}}), do: true
+  defp file?(_), do: false
+
+  defp upload?({_, %Bow{path: path}}), do: path != nil
 
   ## REMOTE FILE URL
 

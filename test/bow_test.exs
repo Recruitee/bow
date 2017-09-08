@@ -137,7 +137,7 @@ defmodule BowTest do
       # then test delete
       file = MinimalUploader.new(name: "cat.jpg")
       assert :ok = Bow.delete(file)
-      assert File.exists?("tmp/bow/minimal/cat.jpg") == false
+      refute File.exists?("tmp/bow/minimal/cat.jpg")
     end
   end
 

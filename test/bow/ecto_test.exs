@@ -142,9 +142,37 @@ defmodule Bow.EctoTest do
       assert file.path == "tmp/bow/users/#{user.id}/bear.png"
     end
 
-    # test "delete" do
-    # TODO
-    # end
+    test "delete when empty" do
+      # insert user with avatar
+      {:ok, _user, _} =
+        User.changeset(%{"name" => "Jon"})
+        |> Repo.insert!
+        |> Bow.Ecto.store()
+
+      # test delete
+      assert {:ok, _user} =
+        User
+        |> Repo.one()
+        |> Repo.delete!()
+        |> Bow.Ecto.delete()
+    end
+
+    test "delete avatar" do
+      # insert user with avatar
+      {:ok, _user, _} =
+        User.changeset(%{"name" => "Jon", "avatar" => @upload_bear})
+        |> Repo.insert!
+        |> Bow.Ecto.store()
+
+      # test delete
+      assert {:ok, user} =
+        User
+        |> Repo.one()
+        |> Repo.delete!()
+        |> Bow.Ecto.delete()
+
+      refute File.exists?("tmp/bow/users/#{user.id}/bear.png")
+    end
   end
 
   describe "Validation" do
