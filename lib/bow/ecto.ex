@@ -97,11 +97,11 @@ defmodule Bow.Ecto do
         # end
 
         def load(name) do
-        #   {:ok, Bow.new(nil, name: name, uploader: unquote(uploader))}
+          {:ok, unquote(uploader).new(name: name)}
         end
 
         def dump(%{name: name}) do
-          # {:ok, name}
+          {:ok, name}
         end
       end
 
