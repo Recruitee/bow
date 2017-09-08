@@ -229,14 +229,9 @@ defmodule Bow.Uploader do
 
       def new(args) do
         args
-        |> Keyword.put(:uploader, __MODULE__)
         |> Bow.new()
+        |> Bow.set(:uploader, __MODULE__)
       end
-
-      def url(file),                          do: url(file, :original, [])
-      def url(file, opts) when is_list(opts), do: url(file, :original, opts)
-      def url(file, version),                 do: url(file, version, [])
-      def url(file, version, opts),           do: Bow.url(__MODULE__, file, version, opts)
 
       # default store options
       def store_options(_file), do: %{}

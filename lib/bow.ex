@@ -50,9 +50,6 @@ defmodule Bow do
     make(uploader, file, file, versions) |> combine_results
   end
 
-  # def load({file, scope}) do
-  #   file |> set_scope(scope) |> load
-  # end
 
   @doc """
   Load given file
@@ -77,8 +74,8 @@ defmodule Bow do
 
   defp make(up, f0, fx, version) do
     fy = fx
-      |> set_name(up.filename(f0, version))
-      |> set_path(nil)
+      |> set(:name, up.filename(f0, version))
+      |> set(:path, nil)
 
     case up.transform(fx, fy, version) do
       {:ok, fy, next_versions} ->
@@ -113,34 +110,21 @@ defmodule Bow do
     )
   end
 
-  # defp get_file_path(uploader, file) do
-  #   storage().load(
-  #     uploader.store_dir(file),
-  #     file.name
-  #   )
-  # end
+  def url(file), do: url(file, [])
+  def url(file, opts) when is_list(opts), do: url(file, :original, opts)
+  def url(file, version), do: url(file, version, [])
+  def url(file, version, opts) do
+    file = resolve_scope(file)
 
-  def url(_, nil, _, _), do: nil
-  def url(_, {nil, _}, _, _), do: nil
-
-  def url(uploader, {file, scope}, version, opts) do
-    url(uploader, %{file | scope: scope}, version, opts)
-  end
-
-  def url(uploader, file, version, opts) do
     storage().url(
-      uploader.store_dir(file),
-      uploader.filename(file, version),
+      file.uploader.store_dir(file),
+      file.uploader.filename(file, version),
       opts
     )
   end
 
-  # def new([{:path, path} | args]) do
-  #   %__MODULE__{
-  #
-  #   }
-  # end
-
+  defp resolve_scope({file, scope}), do: set(file, :scope, scope)
+  defp resolve_scope(file), do: file
 
   def new(args) do
     {name, path} = case {args[:name], args[:path]} do
@@ -163,13 +147,14 @@ defmodule Bow do
   defp rootname(name), do: name |> Path.rootname()
   defp extname(name), do: name |> Path.extname() |> String.downcase()
 
-  def set_path(file, path), do: %{file | path: path}
-  def set_name(file, name), do: %{file | name: name, rootname: Path.rootname(name), ext: extname(name)}
-  def set_rootname(file, rootname), do: %{file | rootname: rootname, name: "#{rootname}#{file.ext}"}
-  def set_ext(file, ext) when ext in ["", nil], do: %{file | ext: "", name: file.rootname}
-  def set_ext(file, "." <> ext),                do: %{file | ext: ext, name: "#{file.rootname}#{ext}"}
-  def set_ext(file, ext),                       do: %{file | ext: "." <> ext, name: "#{file.rootname}.#{ext}"}
-  def set_scope(file, scope), do:  %{file | scope: scope}
+  def set(file, :name, name), do:
+    %{file | name: name, rootname: rootname(name), ext: extname(name)}
+  def set(file, :rootname, rootname), do:
+    %{file | name: rootname <> file.ext, rootname: rootname}
+  def set(file, :ext, ext), do:
+    %{file | name: file.rootname <> ext, ext: ext}
+  def set(file, key, value), do:
+    struct(file, [{key, value}])
 
   def combine_results(results) do
     if Enum.any?(results, &match?({_, {:error, _}}, &1)) do
@@ -210,10 +195,10 @@ defmodule Bow do
   #   end
   # end
 
-  def to_plug_upload(%{name: name, path: path, ext: ext}) do
-    %Plug.Upload{filename: name, path: path, content_type: content_type(ext)}
-  end
-
-  defp content_type("." <> ext), do: MIME.type(ext)
-  defp content_type(ext), do: MIME.type(ext)
+  # def to_plug_upload(%{name: name, path: path, ext: ext}) do
+  #   %Plug.Upload{filename: name, path: path, content_type: content_type(ext)}
+  # end
+  #
+  # defp content_type("." <> ext), do: MIME.type(ext)
+  # defp content_type(ext), do: MIME.type(ext)
 end

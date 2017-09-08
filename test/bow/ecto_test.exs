@@ -22,6 +22,9 @@ defmodule Bow.EctoTest do
       [:original, :thumb]
     end
 
+    def validate(%{ext: ".png"}), do: :ok
+    def validate(_), do: {:error, "Only PNG allowed"}
+
     def store_dir(file) do
       "users/#{file.scope.id}"
     end
@@ -42,6 +45,7 @@ defmodule Bow.EctoTest do
   end
 
   @upload_bear %Plug.Upload{path: "test/files/bear.png", filename: "bear.png"}
+  @upload_memo %Plug.Upload{path: "test/files/memo.txt", filename: "memo.txt"}
 
   describe "Type internals" do
     test "type/0" do
@@ -58,6 +62,20 @@ defmodule Bow.EctoTest do
       assert {:ok, %Bow{} = file} = Avatar.Type.load("bear.png")
       assert file.name == "bear.png"
       assert file.path == nil
+    end
+  end
+
+  describe "Custom cast" do
+    defmodule Timestamp do
+      use Bow.Uploader
+      use Bow.Ecto
+
+      def cast(file) do
+        ts = DateTime.utc_now |> DateTime.to_unix
+        Bow.set(file, :rootname, "avatar_#{ts}")
+      end
+
+      def store_dir(file), do: "timestamp"
     end
   end
 
@@ -86,8 +104,8 @@ defmodule Bow.EctoTest do
       assert %Bow{name: "bear.png"} = user.avatar
       assert File.exists?("tmp/bow/users/#{user.id}/bear.png")
 
-      assert Avatar.url({user.avatar, user}) == "tmp/bow/users/#{user.id}/bear.png"
-      assert Avatar.url({user.avatar, user}, :thumb) == "tmp/bow/users/#{user.id}/thumb_bear.png"
+      assert Bow.url({user.avatar, user}) == "tmp/bow/users/#{user.id}/bear.png"
+      assert Bow.url({user.avatar, user}, :thumb) == "tmp/bow/users/#{user.id}/thumb_bear.png"
     end
 
     test "load avatar" do
@@ -111,7 +129,51 @@ defmodule Bow.EctoTest do
       user = Repo.one(User)
       assert user.avatar == nil
     end
+
+    test "load with scope" do
+      # insert user with avatar
+      {:ok, user, _} =
+        User.changeset(%{"name" => "Jon", "avatar" => @upload_bear})
+        |> Repo.insert!
+        |> Bow.Ecto.store()
+
+      # test load
+      assert {:ok, file} = Bow.Ecto.load(user, :avatar)
+      assert file.path == "tmp/bow/users/#{user.id}/bear.png"
+    end
+
+    # test "delete" do
+    # TODO
+    # end
   end
+
+  describe "Validation" do
+    test "allow empty file" do
+      user =
+        User.changeset(%{"name" => "Jon"})
+        |> Bow.Ecto.validate()
+
+      assert user.valid? == true
+    end
+
+    test "allow png file" do
+      user =
+        User.changeset(%{"name" => "Jon", "avatar" => @upload_bear})
+        |> Bow.Ecto.validate()
+
+      assert user.valid? == true
+    end
+
+    test "do not allow txt file" do
+      user =
+        User.changeset(%{"name" => "Jon", "avatar" => @upload_memo})
+        |> Bow.Ecto.validate()
+
+      assert user.valid? == false
+      assert user.errors[:avatar] == {"Only PNG allowed", []}
+    end
+  end
+
 
 #   import Mock
 

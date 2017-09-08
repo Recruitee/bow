@@ -34,21 +34,18 @@ defmodule Bow.Ecto do
           field :avatar, MyApp.UserAvatarUploader.Type <-- HERE
         end
 
-        @required_fields ~w(email)
-        @optional_fields ~w(avatar)
-
-        def changeset(model, params \\ %{}) do
+        def changeset(model \\ %__MODULE__{}, params) do
           model
-          |> cast(params, @required_fields, @optional_fields)
-          |> Bow.Ecto.validate # <---- HERE
+          |> cast(params, [:email, :avatar])
+          |> Bow.Ecto.validate() # <---- HERE
         end
       end
 
 
       # create user and save files
       changeset = User.changeset(%User{}, params)
-      with {:ok, user}  <- Repo.insert(changeset),
-           {:ok, _}     <- Bow.Ecto.store(user) do
+      with {:ok, user}    <- Repo.insert(changeset),
+           {:ok, user, _} <- Bow.Ecto.store(user) do
         {:ok, user}
       end
 
@@ -67,8 +64,8 @@ defmodule Bow.Ecto do
         use Bow.Ecto
 
         def cast(file) do
-          # TODO: update this example
-          file |> Bow.set_name("avatar_\#{DateTime.utc_now |> DateTime.to_unix}\#{file.ext}")
+          ts = DateTime.utc_now |> DateTime.to_unix
+          Bow.set(file, :rootname, "avatar_\#{ts}")
         end
       end
 
@@ -105,13 +102,6 @@ defmodule Bow.Ecto do
         end
       end
 
-      # def validate_changeset_field(changeset, field, file) do
-      #   case validate(file) do
-      #     {:error, reason}  -> %{changeset | errors: changeset.errors ++ [{field, {reason, []}}], valid?: false}
-      #     :ok               -> changeset
-      #   end
-      # end
-
       @behaviour Bow.Ecto
 
       def cast(file), do: file
@@ -119,9 +109,9 @@ defmodule Bow.Ecto do
     end
   end
 
-
-
-  # alias Ecto.Changeset
+  defmodule StoreError do
+    defexception message: nil, reason: nil
+  end
 
 
   @doc """
@@ -129,18 +119,18 @@ defmodule Bow.Ecto do
 
   Example
 
-      def changeset(model, params \\ %{}) do
+      def changeset(model, params) do
         model
-        |> cast(params, @required_fields, @optional_fields)
-        |> Bow.Ecto.validate
+        |> cast(params, [:name, :avatar])
+        |> Bow.Ecto.validate()
       end
   """
-  # def validate(%Changeset{} = changeset) do
-  #   changeset
-  #   |> extract
-  #   |> Enum.reduce(changeset, &validate_upload/2)
-  # end
-
+  @spec validate(Ecto.Changeset.t) :: Ecto.Changeset.t
+  def validate(%Ecto.Changeset{} = changeset) do
+    changeset
+    |> extract_uploads()
+    |> Enum.reduce(changeset, &validate_upload/2)
+  end
 
   @doc """
   Store files assigned to uploaders in Ecto Schema or Changeset.
@@ -162,41 +152,90 @@ defmodule Bow.Ecto do
         {:ok, user}
       end
 
-  ## Using with pipe
+  ### Creating
 
-  `Bow.Ecto` understands pipes so you can use and it will return:
-    - in case of `{:ok, record}` - `{:ok, record, store_results}`
-    - in case of `{:error, reason}` - `{:error, reason}` (no uploading)
+      user = User.changeset(params)
+      with {:ok, user} <- Repo.insert(user),
+          {:ok, user, results} <- Bow.Ecto.store(user) do
+        # ...
+      else
+        {:error, reason} -> # handle error
+      end
 
+
+  ### Updating
+
+      user = User.changeset(user, params)
+      with {:ok, user} <- Repo.update(user),
+          {:ok, user, results} <- Bow.Ecto.store(user) do
+        # ...
+      else
+        {:error, reason} -> # handle error
+      end
+
+  There is also `store!/1` function that will raise error instead of returning `:ok/:error` tuple.
+  """
+  @spec store(Ecto.Schema.t) :: {:ok, Ecto.Schema.t, {:ok, list}} | {:error, any}
+  def store(record) do
+    with {:ok, results} <- do_store(record) do
+      {:ok, record, results}
+    end
+  end
+
+  @doc """
+  Same as `store/1` but raises an exception in case of upload error
 
   ### Creating
 
       %User{}
       |> User.changeset(params)
-      |> Repo.insert
-      |> Bow.Ecto.store
-
+      |> Repo.insert!()
+      |> Bow.Ecto.store!()
 
   ### Updating
 
       user
       |> User.changeset(params)
-      |> Repo.update
-      |> Bow.Ecto.store
-
-  There is also `store!/1` function that will raise error instead of returning `:ok/:error` tuple.
+      |> Repo.update!()
+      |> Bow.Ecto.store!()
   """
-  # @spec store(input :: ({:ok, Ecto.Schema.t} | {:error, any} | Ecto.Schema.t)) ::
-  #   {:ok, Ecto.Schema.t, {:ok, any}} |
-  #   {:ok, Ecto.Schema.t, {:error, any}} |
-  #   {:ok, results :: any} |
-  #   {:error, reason :: any}
-  @spec store(Ecto.Schema.t) :: {:ok, Ecto.Schema.t, {:ok, list}} | {:error, any}
-  # def store({:error, _} = err), do: err
-  # def store({:ok, record}),     do: {:ok, record, store(record)}
-  def store(record) do
-    with {:ok, results} <- do_store(record) do
-      {:ok, record, results}
+  @spec store!(Ecto.Schema.t) :: Ecto.Chema.t | no_return
+  def store!(record) do
+    case store(record) do
+      {:ok, record, _} -> record
+      {:error, reason} -> raise StoreError, message: inspect(reason), reason: reason
+    end
+  end
+
+
+
+  @doc """
+  Load file from storage
+
+  Example
+      user = Repo.get(...)
+      case Bow.Ecto.load(user, :avatar) do
+        {:ok, file} -> # file.path is populated with tmp path
+        {:error, reason} -> # handle load error
+      end
+
+  """
+  @spec load(Ecto.Schema.t, field :: atom) :: {:ok, Bow.t} | {:error, any}
+  def load(record, field) do
+    record
+    |> Map.get(field)
+    |> Bow.set(:scope, record)
+    |> Bow.load()
+  end
+
+
+
+  defp validate_upload({field, file}, changeset) do
+    case file.uploader.validate(file) do
+      :ok ->
+        changeset
+      {:error, reason} ->
+        Ecto.Changeset.add_error(changeset, field, reason)
     end
   end
 
@@ -207,36 +246,12 @@ defmodule Bow.Ecto do
     |> Bow.combine_results()
   end
 
-  @doc """
-  Same as `store/1` but raises an exception in case of upload error
-  """
-  # @spec store!(input :: ({:ok, Ecto.Schema.t} | {:error, any} | Ecto.Schema.t)) ::
-  #   {:ok, Ecto.Schema.t} | {:error, any} | any
-  # def store!({:error, _} = err), do: err
-  # def store!({:ok, record}) do
-  #   store!(record)
-  #   {:ok, record}
-  # end
-  # def store!(input) do
-  #   {:ok, _} = store(input) # TODO: Raise proper error
-  # end
-
-  # defp validate_upload({field, file}, changeset) do
-  #   file.uploader.validate_changeset_field(changeset, field, file)
-  # end
-  #
-  # defp store_uploads(uploads, scope) do
-  #   uploads
-  #   |> Enum.map(&store_upload(&1, scope))
-  #   |> Bow.combine_results
-  # end
-
   defp store_upload({field, file}, record), do: {field, Bow.store(%{file | scope: record})}
 
-  # defp extract_uploads(%Changeset{} = changeset) do
-  #   changeset.changes
-  #   |> Enum.filter(&upload?/1)
-  # end
+  defp extract_uploads(%Ecto.Changeset{} = changeset) do
+    changeset.changes
+    |> Enum.filter(&upload?/1)
+  end
   defp extract_uploads(record) do
     record
     |> Map.from_struct

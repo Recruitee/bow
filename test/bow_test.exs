@@ -56,6 +56,49 @@ defmodule BowTest do
     end
   end
 
+  describe "#set" do
+    test "set :name" do
+      file =
+        Bow.new(name: "file.png")
+        |> Bow.set(:name, "new.jpg")
+
+      assert file.name == "new.jpg"
+      assert file.ext == ".jpg"
+      assert file.rootname == "new"
+    end
+
+    test "set :rootname" do
+      file =
+        Bow.new(name: "file.png")
+        |> Bow.set(:ext, ".jpg")
+
+      assert file.name == "file.jpg"
+      assert file.ext == ".jpg"
+      assert file.rootname == "file"
+    end
+
+    test "set :ext" do
+      file =
+        Bow.new(name: "file.png")
+        |> Bow.set(:rootname, "new")
+
+      assert file.name == "new.png"
+      assert file.ext == ".png"
+      assert file.rootname == "new"
+    end
+
+    test "set :other" do
+      file =
+        Bow.new(name: "file.png")
+        |> Bow.set(:path, "some/path")
+
+      assert file.name == "file.png"
+      assert file.ext == ".png"
+      assert file.rootname == "file"
+      assert file.path == "some/path"
+    end
+  end
+
   describe "Minimal uploader" do
     defmodule MinimalUploader do
       use Bow.Uploader
@@ -228,10 +271,10 @@ defmodule BowTest do
       assert File.exists?("tmp/bow/pipeline/thumb2_bear.png")
       assert File.exists?("tmp/bow/pipeline/thumb3_bear.png")
 
-      assert PipelineUploader.url(file) == "tmp/bow/pipeline/bear.png"
-      assert PipelineUploader.url(file, :image_thumb1) == "tmp/bow/pipeline/thumb1_bear.png"
-      assert PipelineUploader.url(file, :image_thumb2) == "tmp/bow/pipeline/thumb2_bear.png"
-      assert PipelineUploader.url(file, :image_thumb3) == "tmp/bow/pipeline/thumb3_bear.png"
+      assert Bow.url(file) == "tmp/bow/pipeline/bear.png"
+      assert Bow.url(file, :image_thumb1) == "tmp/bow/pipeline/thumb1_bear.png"
+      assert Bow.url(file, :image_thumb2) == "tmp/bow/pipeline/thumb2_bear.png"
+      assert Bow.url(file, :image_thumb3) == "tmp/bow/pipeline/thumb3_bear.png"
     end
 
     test "upload .txt and ignore it" do
@@ -291,10 +334,10 @@ defmodule BowTest do
     test "uploader url" do
       file = UrlUploader.new(path: @file_bear)
 
-      assert UrlUploader.url(file)              == "tmp/bow/urls/bear.png"
-      assert UrlUploader.url(file, :pdf)        == "tmp/bow/urls/bear.pdf"
-      assert UrlUploader.url(file, :thumb)      == "tmp/bow/urls/thumb_bear.png"
-      assert UrlUploader.url(file, :thumb_jpg)  == "tmp/bow/urls/thumb_bear.jpg"
+      assert Bow.url(file)              == "tmp/bow/urls/bear.png"
+      assert Bow.url(file, :pdf)        == "tmp/bow/urls/bear.pdf"
+      assert Bow.url(file, :thumb)      == "tmp/bow/urls/thumb_bear.png"
+      assert Bow.url(file, :thumb_jpg)  == "tmp/bow/urls/thumb_bear.jpg"
     end
   end
 
@@ -323,4 +366,168 @@ defmodule BowTest do
       ]}
     end
   end
+  #   import Mock
+  #
+  #   test_with_mock "remote_file_url handling", Bow.Download, [
+  #     get: fn _ ->
+  #       %{
+  #         status: 200,
+  #         body: "",
+  #         headers: %{"Content-Type" => "image/png"}
+  #       }
+  #     end
+  #   ] do
+  #     params = %{
+  #       "name" => "Jon",
+  #       "remote_avatar_url" => "http://img.example.com/file.png"
+  #     }
+  #
+  #     user = %MyUser{id: 1}
+  #       |> Bow.Ecto.cast_uploads(params, [:avatar])
+  #
+  #     assert %Bow{name: "file.png"} = user.changes.avatar
+  #   end
+  # end
+  #
+  # describe "download remote file" do
+  #   import Mock
+  #
+  #   test_with_mock "regular file", Bow.Download, [
+  #     get: fn _ ->
+  #       %{
+  #         status: 200,
+  #         body: "",
+  #         headers: %{"Content-Type" => "image/png"}
+  #       }
+  #     end
+  #   ] do
+  #     assert {:ok, %Plug.Upload{
+  #       filename: "file1.png",
+  #       content_type: "image/png"
+  #     }} = Bow.download_remote_file("http://example.com/file1.png")
+  #   end
+  #
+  #   test_with_mock "dynamic path", Bow.Download, [
+  #     get: fn _ ->
+  #       %{
+  #         status: 200,
+  #         body: "",
+  #         headers: %{"Content-Type" => "image/jpeg"}
+  #       }
+  #     end
+  #   ] do
+  #     assert {:ok, %Plug.Upload{
+  #       filename: "avatar.jpg",
+  #       content_type: "image/jpeg"
+  #     }} = Bow.download_remote_file("http://example.com/avatar?uid=123")
+  #   end
+  # end
+  #
+  # describe "Failing conversion" do
+  #   defmodule DocUploader do
+  #     use Bow.Uploader
+  #
+  #     def versions(_) do
+  #       [:original, :pdf]
+  #     end
+  #
+  #     # do nothing with original file
+  #     def transform(source, target, :original), do: transform_original(source, target)
+  #
+  #     # convert to pdf
+  #     def transform(source, target, :pdf) do
+  #       with {:ok, pdf} <- Bow.Exec.exec(source, target, "#{File.cwd!}/bin/soffice_pdf_wrapper ${input} ${output}") do
+  #         {:ok, pdf, [:thumb]} # and then convert to thumb
+  #       end
+  #     end
+  #
+  #     def transform(source, target, :thumb) do
+  #       Bow.Exec.exec source, target, "convert ${input} -strip -gravity North -background '#ffffff'" <>
+  #                                     " -resize 250x175^ -extent 250x175 -format png png:${output}"
+  #     end
+  #
+  #     def filename(file, :original),  do: file.name
+  #     def filename(file, :pdf),       do: "#{file.rootname}.pdf"
+  #     def filename(file, :thumb),     do: "thumb_#{file.rootname}.png"
+  #
+  #     def store_dir(_) do
+  #       "docs"
+  #     end
+  #   end
+  #
+  #   @tag :pending # this code is correct, but libreoffice gives random errors
+  #   test "upload correct file" do
+  #     file = DocUploader.new("test/files/cvs/cv7.docx")
+  #     assert {:ok, results} = Bow.store(file)
+  #
+  #     assert :ok  = results[:original]
+  #     assert :ok  = results[:pdf]
+  #     assert :ok  = results[:thumb]
+  #
+  #     assert File.exists?("tmp/bow/docs/cv7.docx")
+  #     assert File.exists?("tmp/bow/docs/cv7.pdf")
+  #     assert File.exists?("tmp/bow/docs/thumb_cv7.png")
+  #   end
+  #
+  #   @tag :pending # this code is correct, but libreoffice gives random errors
+  #   test "upload invalid file" do
+  #     file = DocUploader.new("test/files/mails/1.txt")
+  #     assert {:error, results} = Bow.store(file)
+  #     assert :ok          = results[:original]
+  #     assert :ok          = results[:pdf]
+  #     assert {:error, _}  = results[:thumb]
+  #
+  #     assert File.exists?("tmp/bow/docs/1.txt")
+  #     assert File.exists?("tmp/bow/docs/1.pdf")
+  #     refute File.exists?("tmp/bow/docs/thumb_1.png")
+  #   end
+  #
+  #   @tag :pending # this code is correct, but libreoffice gives random errors
+  #   test "upload broken file - timeout" do
+  #     file = DocUploader.new("test/files/problematic_cvs/cv_1474621687.docx")
+  #     assert {:error, results} = Bow.store(file)
+  #     assert :ok          = results[:original]
+  #     assert {:error, _}  = results[:pdf]
+  #
+  #     assert File.exists?("tmp/bow/docs/cv_1474621687.docx")
+  #     refute File.exists?("tmp/bow/docs/cv_1474621687.pdf")
+  #     refute File.exists?("tmp/bow/docs/thumb_cv_1474621687.png")
+  #   end
+  # end
+  #
+  # describe "regenerate versions" do
+  #   defmodule V1 do
+  #     use Bow.Uploader
+  #
+  #     def store_dir(_) do
+  #       "regenerate"
+  #     end
+  #   end
+  #
+  #   defmodule V2 do
+  #     use Bow.Uploader
+  #
+  #     def versions(_), do: [:original, :thumb]
+  #
+  #     def store_dir(_) do
+  #       "regenerate"
+  #     end
+  #   end
+  #
+  #
+  #   test "regenerate versions when updating uploader" do
+  #     file = V1.new("test/files/photos/female1.png", name: "file.png")
+  #     Bow.store(file)
+  #
+  #     assert File.exists?("tmp/bow/regenerate/file.png")
+  #     refute File.exists?("tmp/bow/regenerate/thumb_file.png")
+  #
+  #     file = V2.new(nil, name: "file.png")
+  #     Bow.regenerate(file)
+  #
+  #     assert File.exists?("tmp/bow/regenerate/file.png")
+  #     assert File.exists?("tmp/bow/regenerate/thumb_file.png")
+  #   end
+  # end
+
 end
