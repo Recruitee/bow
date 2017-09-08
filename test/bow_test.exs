@@ -297,4 +297,30 @@ defmodule BowTest do
       assert UrlUploader.url(file, :thumb_jpg)  == "tmp/bow/urls/thumb_bear.jpg"
     end
   end
+
+  describe "#combine_results" do
+    test "empty" do
+      assert Bow.combine_results([]) == {:ok, []}
+    end
+
+    test "all ok" do
+      assert Bow.combine_results([
+        {:avatar, {:ok, "data"}},
+        {:photo,  {:ok, "cool"}}
+      ]) == {:ok, [
+        {:avatar, {:ok, "data"}},
+        {:photo,  {:ok, "cool"}}
+      ]}
+    end
+
+    test "with error" do
+      assert Bow.combine_results([
+        {:avatar, {:ok, "data"}},
+        {:photo,  {:error, "wrong"}}
+      ]) == {:error, [
+        {:avatar, {:ok, "data"}},
+        {:photo,  {:error, "wrong"}}
+      ]}
+    end
+  end
 end

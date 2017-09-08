@@ -26,6 +26,7 @@ defmodule Bow do
             uploader: atom
   }
 
+  @enforce_keys [:name, :rootname, :ext]
   defstruct name:     "",
             rootname: "",
             ext:      nil,
@@ -33,7 +34,6 @@ defmodule Bow do
             scope:    nil,
             uploader: nil
 
-  @enforce_keys [:name, :rootname, :ext]
 
   defmodule Error do
     defexception message: ""
@@ -172,17 +172,12 @@ defmodule Bow do
   def set_scope(file, scope), do:  %{file | scope: scope}
 
   def combine_results(results) do
-    error? = Enum.any? results, fn
-      {_, {:error, _}} -> true
-      _                -> false
+    if Enum.any?(results, &match?({_, {:error, _}}, &1)) do
+      {:error, results}
+    else
+      {:ok, results}
     end
-
-    status = if error?, do: :error, else: :ok
-
-    {status, results}
   end
-
-  defp extname(name), do: name |> Path.extname |> String.downcase
 
   ## REMOTE FILE URL
   #

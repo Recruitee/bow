@@ -57,7 +57,8 @@ defmodule Bow.Ecto do
   @doc """
   Customize incoming file.
 
-  This is the place to do custom file name transformation, since `filename/2` is used both when uploading AND generating urls
+  This is the place to do custom file name transformation, since `filename/2`
+  is used both when uploading AND generating urls
 
   Example - change file name to include timestamp
 
@@ -66,6 +67,7 @@ defmodule Bow.Ecto do
         use Bow.Ecto
 
         def cast(file) do
+          # TODO: update this example
           file |> Bow.set_name("avatar_\#{DateTime.utc_now |> DateTime.to_unix}\#{file.ext}")
         end
       end
@@ -85,8 +87,8 @@ defmodule Bow.Ecto do
         def type, do: :string
 
         def cast(%Plug.Upload{path: path, filename: name}) do
-        #   file = Bow.new(path, name: name, uploader: unquote(uploader)) |> unquote(uploader).cast
-        #   {:ok, file}
+          file = unquote(uploader).new(path: path, name: name)
+          {:ok, unquote(uploader).cast(file)}
         end
 
         # def cast(%Bow{} = file) do
@@ -110,17 +112,16 @@ defmodule Bow.Ecto do
       #   end
       # end
 
+      @behaviour Bow.Ecto
 
-      # @behaviour Bow.Ecto
-      #
-      # def cast(file), do: file
-      # defoverridable [cast: 1]
+      def cast(file), do: file
+      defoverridable [cast: 1]
     end
   end
 
 
 
-  alias Ecto.Changeset
+  # alias Ecto.Changeset
 
 
   @doc """
@@ -146,7 +147,8 @@ defmodule Bow.Ecto do
 
   In order to understand how to properly use `store/1` function you need to read these few points:
   - Ecto does not have callbacks (like `after_save` etc)
-  - `Ecto.Changeset.prepare_changes` is run *before* data is saved into database, so when inserting a new record it will **not** have a primary key (id)
+  - `Ecto.Changeset.prepare_changes` is run *before* data is saved into database,
+    so when inserting a new record it will **not** have a primary key (id)
   - Uploading during type casting is a bad idea
   - You do want to use record primary key in storage directory definition
   - You don't want to upload the same file multiple time, even if it hasn't changed
@@ -189,9 +191,21 @@ defmodule Bow.Ecto do
   #   {:ok, Ecto.Schema.t, {:error, any}} |
   #   {:ok, results :: any} |
   #   {:error, reason :: any}
+  @spec store(Ecto.Schema.t) :: {:ok, Ecto.Schema.t, {:ok, list}} | {:error, any}
   # def store({:error, _} = err), do: err
   # def store({:ok, record}),     do: {:ok, record, store(record)}
-  # def store(record),            do: store_uploads(extract(record), record)
+  def store(record) do
+    with {:ok, results} <- do_store(record) do
+      {:ok, record, results}
+    end
+  end
+
+  defp do_store(record) do
+    record
+    |> extract_uploads()
+    |> Enum.map(&store_upload(&1, record))
+    |> Bow.combine_results()
+  end
 
   @doc """
   Same as `store/1` but raises an exception in case of upload error
@@ -217,24 +231,24 @@ defmodule Bow.Ecto do
   #   |> Bow.combine_results
   # end
 
-  # defp store_upload({field, file}, scope), do: {field, Bow.store(%{file | scope: scope})}
-  #
-  # defp extract(%Changeset{} = changeset) do
+  defp store_upload({field, file}, record), do: {field, Bow.store(%{file | scope: record})}
+
+  # defp extract_uploads(%Changeset{} = changeset) do
   #   changeset.changes
   #   |> Enum.filter(&upload?/1)
   # end
-  # defp extract(record) do
-  #   record
-  #   |> Map.from_struct
-  #   |> Enum.filter(&upload?/1)
-  # end
+  defp extract_uploads(record) do
+    record
+    |> Map.from_struct
+    |> Enum.filter(&upload?/1)
+  end
 
-  # defp upload?({_, %Bow{path: path}}) when not is_nil(path), do: true
-  # defp upload?(_), do: false
+  defp upload?({_, %Bow{path: path}}) when not is_nil(path), do: true
+  defp upload?(_), do: false
 
   ## REMOTE FILE URL
 
-  import Ecto.Changeset, only: [cast: 3]
+  # import Ecto.Changeset, only: [cast: 3]
 
   # def cast_uploads(changeset, params, fields) do
   #   cast(changeset, download_remote_file_params(params, fields), fields)
