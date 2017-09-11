@@ -12,4 +12,6 @@ if Mix.env == :test do
     priv:     "test/support"
 
   config :bow, ecto_repos: [Repo]
+
+  config :logger, level: :error
 end
