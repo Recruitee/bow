@@ -23,13 +23,13 @@ defmodule Bow.Mixfile do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  defp applications(:test), do: [:ecto, :postgrex]
+  defp applications(:test), do: [:ecto, :postgrex, :erlexec]
   defp applications(_), do: []
 
   defp deps do
     [
       {:plug,     "~> 1.0"},
-      # {:erlexec,  "~> 1.7.0", optional: true},
+      {:erlexec,  "~> 1.7.0", optional: true},
       {:ecto,     "~> 2.0", optional: true},
       {:ex_aws,   "~> 1.0", optional: true},
 
