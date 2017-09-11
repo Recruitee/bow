@@ -188,42 +188,4 @@ defmodule Bow do
       {:ok, results}
     end
   end
-
-  ## REMOTE FILE URL
-  #
-  # defmodule Download do
-  #   use Tesla
-  #   plug Tesla.Middleware.FollowRedirects
-  #   adapter :hackney
-  # end
-  #
-  # def download_remote_file(url) do
-  #   case Bow.Download.get(URI.encode(url)) do
-  #     %{status: 200, body: body, headers: headers} ->
-  #       content_type = headers["Content-Type"]
-  #       base = url |> URI.parse |> Map.get(:path) |> Path.basename
-  #       name = case MIME.extensions(content_type) do
-  #         [ext | _] -> Path.rootname(base) <> "." <> ext
-  #         _         -> base
-  #       end
-  #       path = Plug.Upload.random_file!("bow_download")
-  #       File.write!(path, body)
-  #       {:ok, %Plug.Upload{filename: name, path: path, content_type: content_type}}
-  #
-  #     env ->
-  #       ex = %Tesla.Error{message: "Bow.Download error"}
-  #       stacktrace = System.stacktrace()
-  #       Sentry.capture_exception(ex, stacktrace: stacktrace, extra: %{
-  #         env: inspect(env)
-  #       })
-  #       {:error, env}
-  #   end
-  # end
-
-  # def to_plug_upload(%{name: name, path: path, ext: ext}) do
-  #   %Plug.Upload{filename: name, path: path, content_type: content_type(ext)}
-  # end
-  #
-  # defp content_type("." <> ext), do: MIME.type(ext)
-  # defp content_type(ext), do: MIME.type(ext)
 end
