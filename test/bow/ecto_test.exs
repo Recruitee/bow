@@ -202,26 +202,36 @@ defmodule Bow.EctoTest do
     end
   end
 
+  describe "Remote file URLs" do
+    defp client do
+      Tesla.build_adapter fn
+        %{url: "http://example.com/bear.png"} = env ->
+          %{env |
+            status: 200,
+            body: File.read!("test/files/bear.png"),
+            headers: %{"Content-Type" => "image/png"}
+          }
+        env ->
+          %{env | status: 404}
+      end
+    end
 
-#   import Mock
+    test "empty params" do
+      params = %{}
+      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], client())
+      assert user.changes == %{}
+    end
 
-#   test_with_mock "remote_file_url handling", Bow.Download, [
-#     get: fn _ ->
-#       %{
-#         status: 200,
-#         body: "",
-#         headers: %{"Content-Type" => "image/png"}
-#       }
-#     end
-#   ] do
-#     params = %{
-#       "name" => "Jon",
-#       "remote_avatar_url" => "http://img.example.com/file.png"
-#     }
-#
-#     user = %MyUser{id: 1}
-#       |> Bow.Ecto.cast_uploads(params, [:avatar])
-#
-#     assert %Bow{name: "file.png"} = user.changes.avatar
-#   end
+    test "invalid URL" do
+      params = %{"remote_avatar_url" => "some-ribbish"}
+      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], client())
+      assert user.changes == %{}
+    end
+
+    test "valid URL" do
+      params = %{"remote_avatar_url" => "http://example.com/bear.png"}
+      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], client())
+      assert %Bow{} = user.changes.avatar
+    end
+  end
 end

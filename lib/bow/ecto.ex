@@ -73,7 +73,6 @@ defmodule Bow.Ecto do
   """
   @callback cast(file :: Bow.t) :: Bow.t
 
-
   defmacro __using__(_) do
     uploader = __CALLER__.module
 
@@ -88,10 +87,10 @@ defmodule Bow.Ecto do
           {:ok, unquote(uploader).cast(file)}
         end
 
-        # def cast(%Bow{} = file) do
-        #   file = %{file | uploader: unquote(uploader), path: nil} |> unquote(uploader).cast
-        #   {:ok, file}
-        # end
+        def cast(%Bow{} = file) do
+          file = %{file | uploader: unquote(uploader)}
+          {:ok, unquote(uploader).cast(file)}
+        end
 
         def load(name) do
           {:ok, unquote(uploader).new(name: name)}
@@ -287,26 +286,31 @@ defmodule Bow.Ecto do
 
   defp upload?({_, %Bow{path: path}}), do: path != nil
 
-  ## REMOTE FILE URL
+  @doc """
+  Download remote files for given fields, i.e.
+  `params["remote_avatar_url"] = "http://example.com/some/file.png"`
 
-  # import Ecto.Changeset, only: [cast: 3]
+  Example
+      changeset
+      |> cast(params, [:name, :avatar])
+      |> Bow.Ecto.cast_uploads(params, [:avatar])
+  """
+  def cast_uploads(changeset, params, fields, client \\ %Tesla.Client{}) do
+    Ecto.Changeset.cast(changeset, download_params(params, fields, client), fields)
+  end
 
-  # def cast_uploads(changeset, params, fields) do
-  #   cast(changeset, download_remote_file_params(params, fields), fields)
-  # end
-
-  # def download_remote_file_params(params, fields) do
-  #   Enum.reduce(fields, params, fn f, ps ->
-  #     f = to_string(f)
-  #     url = ps["remote_#{f}_url"]
-  #     if url && url != "" do
-  #       case Bow.download_remote_file(url) do
-  #         {:ok, upload} -> Map.put(ps, f, upload)
-  #         _             -> ps
-  #       end
-  #     else
-  #       ps
-  #     end
-  #   end)
-  # end
+  def download_params(params, fields, client \\ %Tesla.Client{}) do
+    Enum.reduce(fields, params, fn field, params ->
+      field = to_string(field)
+      case params["remote_#{field}_url"] do
+        nil -> params
+        ""  -> params
+        url ->
+          case Bow.Download.download(client, url) do
+            {:ok, file} -> Map.put(params, field, file)
+            _           -> params
+          end
+      end
+    end)
+  end
 end
