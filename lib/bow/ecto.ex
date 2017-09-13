@@ -247,6 +247,20 @@ defmodule Bow.Ecto do
     end
   end
 
+
+  @doc """
+  Generate URL for record & field
+  """
+  def url(record, field), do: url(record, field, [])
+  def url(record, field, opts) when is_list(opts), do: url(record, field, :original, opts)
+  def url(record, field, version), do: url(record, field, version, [])
+  def url(record, field, version, opts) do
+    record
+    |> Map.get(field)
+    |> Bow.set(:scope, record)
+    |> Bow.url(version, opts)
+  end
+
   defp validate_upload({field, file}, changeset) do
     case file.uploader.validate(file) do
       :ok ->

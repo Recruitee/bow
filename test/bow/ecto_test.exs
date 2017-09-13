@@ -259,4 +259,31 @@ defmodule Bow.EctoTest do
       assert %Bow{} = user.changes.avatar
     end
   end
+
+  describe "#url" do
+    setup do
+      {:ok, user, _} =
+        User.changeset(%{"name" => "Jon", "avatar" => @upload_bear})
+        |> Repo.insert!
+        |> Bow.Ecto.store()
+
+      {:ok, user: user}
+    end
+
+    test "original", %{user: user} do
+      assert Bow.Ecto.url(user, :avatar) == "tmp/bow/users/#{user.id}/bear.png"
+    end
+
+    test "original + opts", %{user: user} do
+      assert Bow.Ecto.url(user, :avatar, sign: true) == "tmp/bow/users/#{user.id}/bear.png"
+    end
+
+    test "version", %{user: user} do
+      assert Bow.Ecto.url(user, :avatar, :thumb) == "tmp/bow/users/#{user.id}/thumb_bear.png"
+    end
+
+    test "version + opts", %{user: user} do
+      assert Bow.Ecto.url(user, :avatar, :thumb, sign: true) == "tmp/bow/users/#{user.id}/thumb_bear.png"
+    end
+  end
 end
