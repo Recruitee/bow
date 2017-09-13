@@ -270,6 +270,12 @@ defmodule Bow.EctoTest do
       assert user.changes == %{}
     end
 
+    test "empty string as param" do
+      params = %{"remote_avatar_url" => ""}
+      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], client())
+      assert user.changes == %{}
+    end
+
     test "invalid URL" do
       params = %{"remote_avatar_url" => "some-ribbish"}
       user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], client())
