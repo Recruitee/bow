@@ -23,6 +23,13 @@ defmodule BowTest do
   @file_memo    "test/files/memo.txt"
 
   describe "#new" do
+    test "raise when no name nor path" do
+      assert_raise Bow.Error, fn ->
+        # typos are intentional
+        Bow.new(nmae: "cat.jpg", phat: "path/to/cat.jpg")
+      end
+    end
+
     test "with name" do
       file = Bow.new(name: "cat.jpg")
       assert file.name == "cat.jpg"
