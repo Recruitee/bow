@@ -175,6 +175,29 @@ defmodule Bow.EctoTest do
 
       refute File.exists?("tmp/bow/users/#{user.id}/bear.png")
     end
+
+    test "do not store when updating" do
+      # insert user with avatar
+      {:ok, user, _} =
+        User.changeset(%{"name" => "Jon", "avatar" => @upload_bear})
+        |> Repo.insert!
+        |> Bow.Ecto.store()
+
+      # remove file
+      File.rm("tmp/bow/users/#{user.id}/bear.png")
+
+      # test update
+      assert {:ok, user} =
+        User
+        |> Repo.one()
+        |> User.changeset(%{"name" => "Snow"})
+        |> Repo.update()
+
+      assert user.name == "Snow"
+
+      # test file is NOT uploaded
+      refute File.exists?("tmp/bow/users/#{user.id}/bear.png")
+    end
   end
 
   describe "Validation" do
