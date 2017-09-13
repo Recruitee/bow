@@ -150,17 +150,12 @@ defmodule Bow do
   def url(file, version), do: url(file, version, [])
   def url(nil, _version, _opts), do: nil
   def url(file, version, opts) do
-    file = resolve_scope(file)
-
     storage().url(
       file.uploader.store_dir(file),
       file.uploader.filename(file, version),
       opts
     )
   end
-
-  defp resolve_scope({file, scope}), do: set(file, :scope, scope)
-  defp resolve_scope(file), do: file
 
   def new(args) do
     {name, path} = case {args[:name], args[:path]} do

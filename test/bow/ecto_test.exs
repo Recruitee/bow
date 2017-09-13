@@ -106,8 +106,8 @@ defmodule Bow.EctoTest do
       assert %Bow{name: "bear.png"} = user.avatar
       assert File.exists?("tmp/bow/users/#{user.id}/bear.png")
 
-      assert Bow.url({user.avatar, user}) == "tmp/bow/users/#{user.id}/bear.png"
-      assert Bow.url({user.avatar, user}, :thumb) == "tmp/bow/users/#{user.id}/thumb_bear.png"
+      assert Bow.Ecto.url(user, :avatar) == "tmp/bow/users/#{user.id}/bear.png"
+      assert Bow.Ecto.url(user, :avatar, :thumb) == "tmp/bow/users/#{user.id}/thumb_bear.png"
     end
 
     test "load avatar" do
