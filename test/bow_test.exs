@@ -381,7 +381,6 @@ defmodule BowTest do
     end
   end
 
-
   describe "Failing conversion" do
     defmodule ErrorUploader do
       use Bow.Uploader
@@ -428,39 +427,37 @@ defmodule BowTest do
     end
   end
 
-  # describe "regenerate versions" do
-  #   defmodule V1 do
-  #     use Bow.Uploader
-  #
-  #     def store_dir(_) do
-  #       "regenerate"
-  #     end
-  #   end
-  #
-  #   defmodule V2 do
-  #     use Bow.Uploader
-  #
-  #     def versions(_), do: [:original, :thumb]
-  #
-  #     def store_dir(_) do
-  #       "regenerate"
-  #     end
-  #   end
-  #
-  #
-  #   test "regenerate versions when updating uploader" do
-  #     file = V1.new("test/files/photos/female1.png", name: "file.png")
-  #     Bow.store(file)
-  #
-  #     assert File.exists?("tmp/bow/regenerate/file.png")
-  #     refute File.exists?("tmp/bow/regenerate/thumb_file.png")
-  #
-  #     file = V2.new(nil, name: "file.png")
-  #     Bow.regenerate(file)
-  #
-  #     assert File.exists?("tmp/bow/regenerate/file.png")
-  #     assert File.exists?("tmp/bow/regenerate/thumb_file.png")
-  #   end
-  # end
+  describe "Regenerate versions" do
+    defmodule V1 do
+      use Bow.Uploader
 
+      def store_dir(_) do
+        "regenerate"
+      end
+    end
+
+    defmodule V2 do
+      use Bow.Uploader
+
+      def versions(_), do: [:original, :thumb]
+
+      def store_dir(_) do
+        "regenerate"
+      end
+    end
+
+    test "regenerate versions when updating uploader" do
+      file = V1.new(path: @file_cat)
+      {:ok, _} = Bow.store(file)
+
+      assert File.exists?("tmp/bow/regenerate/cat.jpg")
+      refute File.exists?("tmp/bow/regenerate/thumb_cat.jpg")
+
+      file = V2.new(path: @file_cat)
+      {:ok, _} = Bow.regenerate(file)
+
+      assert File.exists?("tmp/bow/regenerate/cat.jpg")
+      assert File.exists?("tmp/bow/regenerate/thumb_cat.jpg")
+    end
+  end
 end

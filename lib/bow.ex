@@ -77,8 +77,12 @@ defmodule Bow do
     :ok
   end
 
+  @doc """
+  Regenerate file using different uploader
+  """
+  @spec regenerate(t) :: {:ok, t} | {:error, any}
   def regenerate(file) do
-    file |> load |> store
+    with {:ok, file} <- load(file), do: store(file)
   end
 
   defp make(up, f0, fx, versions, opts) when is_list(versions) do
