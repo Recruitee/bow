@@ -5,7 +5,7 @@ defmodule Bow.Mixfile do
     [
       app: :bow,
       version: "0.1.0",
-      elixir: "~> 1.5",
+      elixir: "~> 1.3",
       elixirc_paths: elixirc_paths(Mix.env),
       start_permanent: Mix.env == :prod,
       aliases: aliases(),
@@ -16,8 +16,13 @@ defmodule Bow.Mixfile do
 
   def application do
     [
-      extra_applications: [:logger] ++ applications(Mix.env)
+      applications: [:logger, :plug, :tesla] ++ applications(Mix.env)
     ]
+
+    # TODO: Uncomment wneh dropping support for elixir 1.3
+    # [
+    #   extra_applications: [:logger] ++ applications(Mix.env)
+    # ]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
@@ -31,7 +36,7 @@ defmodule Bow.Mixfile do
       {:plug,     "~> 1.0"},
       {:tesla,    "~> 0.7", github: "teamon/tesla", branch: "adapter-override"},
       {:erlexec,  "~> 1.7.0", optional: true},
-      {:ecto,     "~> 2.0", optional: true},
+      {:ecto,     ">= 2.0.0 and < 2.2.0", optional: true},
       {:ex_aws,   "~> 1.0", optional: true},
 
       # testing & docs

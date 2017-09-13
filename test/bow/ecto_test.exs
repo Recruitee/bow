@@ -1,6 +1,8 @@
 defmodule Bow.EctoTest do
   use ExUnit.Case
 
+  alias Bow.Repo
+
   setup_all do
     Mix.Task.run "ecto.reset"
     Repo.start_link()
