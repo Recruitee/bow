@@ -40,6 +40,12 @@ defmodule Bow.DownloadTest do
             body: File.read!(@file_cat),
             headers: %{"Content-Type" => "image/png"}
           }
+        %{url: "http://example.com/dog.jpg"} ->
+          %{env |
+            status: 200,
+            body: File.read!(@file_cat),
+            headers: %{"Content-Type" => "example/dog/nope"}
+          }
         _ ->
           %{env |
             status: 404,
@@ -79,6 +85,13 @@ defmodule Bow.DownloadTest do
   test "file without extension", %{client: client} do
     assert {:ok, file} = download(client, "http://example.com/noext")
     assert file.name == "noext"
+    assert file.path != nil
+    assert File.read!(file.path) == File.read!(@file_cat)
+  end
+
+  test "file with invalid content type", %{client: client} do
+    assert {:ok, file} = download(client,  "http://example.com/dog.jpg")
+    assert file.name == "dog.jpg"
     assert file.path != nil
     assert File.read!(file.path) == File.read!(@file_cat)
   end
