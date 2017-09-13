@@ -6,7 +6,7 @@ defmodule Bow.Download do
   @doc """
   Download file from given URL
   """
-  @spec download(client :: Tesla.Client.t, url :: String.t) :: {:ok, Bow.t} | {:error, any}
+  @spec download(client :: Tesla.Client.t | nil, url :: String.t) :: {:ok, Bow.t} | {:error, any}
   def download(client \\ nil, url) do
     case get(client, URI.encode(url)) do
       %{status: 200, url: url, body: body, headers: headers} ->
@@ -22,7 +22,7 @@ defmodule Bow.Download do
         end
 
         path = Plug.Upload.random_file!("bow-download")
-        case File.write!(path, body) do
+        case File.write(path, body) do
           :ok ->
             {:ok, Bow.new(name: name, path: path)}
 
