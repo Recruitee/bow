@@ -93,7 +93,7 @@ defmodule Bow do
       |> set(:name, up.filename(f0, version))
       |> set(:path, nil)
 
-    case up.transform(fx, fy, version) do
+    case transform(up, fx, fy, version) do
       {:ok, fy, next_versions} ->
         res0 = Task.async(fn -> store_file(up, fy, opts) end)
         res1 = make(up, f0, fy, next_versions, opts)
@@ -108,6 +108,12 @@ defmodule Bow do
       {:error, reason} ->
         [{version, {:error, reason}}]
     end
+  end
+
+  defp transform(up, fx, fy, version) do
+    up.transform(fx, fy, version)
+  rescue
+    ex -> {:error, ex}
   end
 
   defp store_file(uploader, file, opts) do
