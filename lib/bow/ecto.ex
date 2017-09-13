@@ -256,7 +256,13 @@ defmodule Bow.Ecto do
   def url(record, field, version), do: url(record, field, version, [])
   def url(record, field, version, opts) do
     record
-    |> Map.get(field)
+    |> Map.fetch!(field)
+    |> do_url(record, version, opts)
+  end
+
+  defp do_url(nil, _, _, _), do: nil
+  defp do_url(file, record, version, opts) do
+    file
     |> Bow.set(:scope, record)
     |> Bow.url(version, opts)
   end

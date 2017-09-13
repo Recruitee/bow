@@ -308,5 +308,13 @@ defmodule Bow.EctoTest do
     test "version + opts", %{user: user} do
       assert Bow.Ecto.url(user, :avatar, :thumb, sign: true) == "tmp/bow/users/#{user.id}/thumb_bear.png"
     end
+
+    test "nil field" do
+      assert Bow.Ecto.url(%User{}, :avatar) == nil
+    end
+
+    test "raise on invalid field" do
+      assert_raise KeyError, fn -> Bow.Ecto.url(%User{}, :nope) end
+    end
   end
 end

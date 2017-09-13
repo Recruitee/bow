@@ -349,6 +349,10 @@ defmodule BowTest do
       assert Bow.url(file, :thumb)      == "tmp/bow/urls/thumb_bear.png"
       assert Bow.url(file, :thumb_jpg)  == "tmp/bow/urls/thumb_bear.jpg"
     end
+
+    test "handle nil gracefully" do
+      assert Bow.url(nil) == nil
+    end
   end
 
   describe "#combine_results" do

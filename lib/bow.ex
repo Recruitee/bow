@@ -138,6 +138,7 @@ defmodule Bow do
   def url(file), do: url(file, [])
   def url(file, opts) when is_list(opts), do: url(file, :original, opts)
   def url(file, version), do: url(file, version, [])
+  def url(nil, _version, _opts), do: nil
   def url(file, version, opts) do
     file = resolve_scope(file)
 
