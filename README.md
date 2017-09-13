@@ -131,3 +131,22 @@ with {:ok, user}    <- Repo.insert(changeset),
   {:ok, user}
 end
 ```
+
+
+## Testing
+
+```bash
+mix test
+```
+
+#### Testing S3 adapter
+
+```bash
+# install fake-s3 gem
+gem install fakes3
+
+# start fake-s3 server
+fakes3 -r tmp/s3 -p 4567
+
+# run tests
+mix test --only s3

@@ -10,42 +10,79 @@ defmodule Bow.Storage.S3 do
         storage:  Bow.Storage.S3
 
       config :ex_aws,
-        bucket:   "my-s3-bucket",
         access_key_id:      "aws-key",
         secret_access_key:  "aws-secret",
         region:             "eu-central-1"
 
+      config :ex_aws, :s3,
+        bucket: "my-bucket"
+
   """
 
-  defp bucket, do: Application.get_env(:ex_aws, :bucket)
-  defp assets_host, do: Application.get_env(:bow, :assets_host, "https://#{bucket()}.s3.amazonaws.com")
-  defp expire_in,   do: Application.get_env(:bow, :expire_in, 24 * 60 * 60)
+  defp s3config, do: ExAws.Config.new(:s3)
 
-  def store(path, dir, name, opts) do
-    key   = Path.join(dir, name)
-    data  = File.read!(path)
-
-    with {:ok, _} <- ExAws.S3.put_object(bucket(), key, data, opts), do: :ok
-  end
-
-  def load(dir, name, opts) do
-    key   = Path.join(dir, name)
-    path  = Plug.Upload.random_file("bow-s3")
-
-    with  {:ok, %{body: data}} <- ExAws.S3.get_object(bucket(), key, opts),
-          :ok <- File.write(path, data, [:binary]) do
-      {:ok, path}
+  defp bucket do
+    case s3config() do
+      %{bucket: bucket} -> bucket
+      _ -> raise ArgumentError, message: "Missing :ex_aws, :s3, bucket: \"...\" configuration"
     end
   end
 
-  def delete(dir, name, opts) do
-    key = Path.join(dir, name)
-    ExAws.S3.delete_object(bucket(), key, opts)
+  defp assets_host do
+    case Application.get_env(:bow, :assets_host) do
+      nil ->
+        %{bucket: bucket, host: host} = conf = s3config()
+        scheme = Map.get(conf, :scheme, "https://")
+        "#{scheme}#{bucket}.#{host}"
+      host ->
+        host
+    end
   end
 
+  defp expire_in, do: Application.get_env(:bow, :expire_in, 24 * 60 * 60)
+
+  @impl true
+  def store(path, dir, name, opts) do
+    path
+    |> ExAws.S3.Upload.stream_file()
+    |> ExAws.S3.upload(bucket(), Path.join(dir, name), opts)
+    |> ExAws.request()
+    |> case do
+      {:ok, %{status_code: 200}} -> :ok
+      error -> error
+    end
+  end
+
+  @impl true
+  def load(dir, name, opts) do
+    path = Plug.Upload.random_file!("bow-s3")
+
+    bucket()
+    |> ExAws.S3.download_file(Path.join(dir, name), path, opts)
+    |> ExAws.request()
+    |> case do
+      {:ok, :done} -> {:ok, path}
+      error -> error
+    end
+  rescue
+    ex in ExAws.Error -> {:error, ex}
+  end
+
+  @impl true
+  def delete(dir, name, opts) do
+    bucket()
+    |> ExAws.S3.delete_object(Path.join(dir, name), opts)
+    |> ExAws.request()
+    |> case do
+      {:ok, %{status_code: 204}} -> :ok
+      error -> error
+    end
+  end
+
+  @impl true
   def url(dir, name, opts) do
     key = Path.join(dir, name)
-    case Map.pop(opts, :signed) do
+    case Keyword.pop(opts, :signed) do
       {true, opts}  -> signed_url(key, opts)
       _             -> unsigned_url(key)
     end
@@ -57,7 +94,8 @@ defmodule Bow.Storage.S3 do
       |> Keyword.put_new(:expire_in, expire_in())
       |> Keyword.put_new(:virtual_host, true)
 
-    with {:ok, url} <- ExAws.S3.presigned_url(:get, bucket(), key, opts), do: url
+    {:ok, url} = ExAws.S3.presigned_url(ExAws.Config.new(:s3), :get, bucket(), key, opts)
+    url
   end
 
   defp unsigned_url(key) do

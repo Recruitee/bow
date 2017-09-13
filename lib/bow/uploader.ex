@@ -234,7 +234,7 @@ defmodule Bow.Uploader do
       end
 
       # default store options
-      def store_options(_file), do: %{}
+      def store_options(_file), do: []
       defoverridable [store_options: 1]
 
       # by default always store just the original

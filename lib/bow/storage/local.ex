@@ -3,6 +3,7 @@ defmodule Bow.Storage.Local do
 
   defp prefix, do: Application.get_env(:bow, :storage_prefix, "tmp/bow")
 
+  @impl true
   def store(file_path, dir, name, _opts) do
     dir   = Path.join([prefix(), dir])
     path  = Path.join([dir, name])
@@ -13,6 +14,7 @@ defmodule Bow.Storage.Local do
     :ok
   end
 
+  @impl true
   def load(dir, name, _opts) do
     # no need to download this file - just point to directly
     path = Path.join([prefix(), dir, name])
@@ -23,6 +25,7 @@ defmodule Bow.Storage.Local do
     end
   end
 
+  @impl true
   def delete(dir, name, _opts) do
     path = Path.join([prefix(), dir, name])
     if File.exists?(path) do
@@ -33,6 +36,7 @@ defmodule Bow.Storage.Local do
     end
   end
 
+  @impl true
   def url(dir, name, _opts) do
     Path.join([prefix(), dir, name])
   end

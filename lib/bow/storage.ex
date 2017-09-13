@@ -26,7 +26,5 @@ defmodule Bow.Storage do
   @doc """
   Generate file URL
   """
-  @callback delete(dir, name, opts) ::
-    :ok | {:error, any}
-
+  @callback url(dir, name, opts) :: binary
 end
