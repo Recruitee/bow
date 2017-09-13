@@ -198,6 +198,29 @@ defmodule Bow.EctoTest do
       # test file is NOT uploaded
       refute File.exists?("tmp/bow/users/#{user.id}/bear.png")
     end
+
+    test "store file with other user (copy)" do
+      # insert user with avatar
+      {:ok, _user, _} =
+        User.changeset(%{"name" => "Jon", "avatar" => @upload_bear})
+        |> Repo.insert!
+        |> Bow.Ecto.store()
+
+      user = User |> Repo.one()
+
+      {:ok, file} = Bow.Ecto.load(user, :avatar)
+
+      {:ok, new_user, _} =
+        User.changeset(%{"name" => "Snow", "avatar" => file})
+        |> Repo.insert!
+        |> Bow.Ecto.store()
+
+      assert File.exists?("tmp/bow/users/#{user.id}/bear.png")
+      assert File.exists?("tmp/bow/users/#{new_user.id}/bear.png")
+
+      assert File.read!("tmp/bow/users/#{user.id}/bear.png")
+          == File.read!("tmp/bow/users/#{new_user.id}/bear.png")
+    end
   end
 
   describe "Validation" do
