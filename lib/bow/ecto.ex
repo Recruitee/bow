@@ -223,11 +223,9 @@ defmodule Bow.Ecto do
   @spec load(Ecto.Schema.t, field :: atom) :: {:ok, Bow.t} | {:error, any}
   def load(record, field) do
     record
-    |> Map.get(field)
-    |> Bow.set(:scope, record)
-    |> Bow.load()
+    |> Map.fetch!(field)
+    |> do_load(recorD)
   end
-
 
   @doc """
   Delete record files from storage
@@ -260,52 +258,6 @@ defmodule Bow.Ecto do
     |> do_url(record, version, opts)
   end
 
-  defp do_url(nil, _, _, _), do: nil
-  defp do_url(file, record, version, opts) do
-    file
-    |> Bow.set(:scope, record)
-    |> Bow.url(version, opts)
-  end
-
-  defp validate_upload({field, file}, changeset) do
-    case file.uploader.validate(file) do
-      :ok ->
-        changeset
-      {:error, reason} ->
-        Ecto.Changeset.add_error(changeset, field, reason)
-    end
-  end
-
-  defp do_store(record) do
-    record
-    |> extract_files()
-    |> filter_uploads()
-    |> Enum.map(&store_upload(&1, record))
-    |> Bow.combine_results()
-  end
-
-  defp store_upload({field, file}, record), do: {field, Bow.store(%{file | scope: record})}
-
-  def do_delete(record) do
-    record
-    |> extract_files()
-    |> Enum.map(&delete_upload(&1, record))
-    |> Bow.combine_results()
-  end
-
-  defp delete_upload({field, file}, record), do: {field, Bow.delete(%{file | scope: record})}
-
-  defp extract_files(%Ecto.Changeset{changes: changes}), do: filter_files(changes)
-  defp extract_files(record), do: record |> Map.from_struct() |> filter_files()
-
-  defp filter_files(fields), do: Enum.filter(fields, &file?/1)
-  defp filter_uploads(files), do: Enum.filter(files, &upload?/1)
-
-  defp file?({_, %Bow{}}), do: true
-  defp file?(_), do: false
-
-  defp upload?({_, %Bow{path: path}}), do: path != nil
-
   @doc """
   Download remote files for given fields, i.e.
   `params["remote_avatar_url"] = "http://example.com/some/file.png"`
@@ -333,4 +285,58 @@ defmodule Bow.Ecto do
       end
     end)
   end
+
+
+  defp do_load(nil, _), do: {:error, :missing}
+  defp do_load(file, record) do
+    file
+    |> Bow.set(:scope, record)
+    |> Bow.load()
+  end
+
+  defp do_url(nil, _, _, _), do: nil
+  defp do_url(file, record, version, opts) do
+    file
+    |> Bow.set(:scope, record)
+    |> Bow.url(version, opts)
+  end
+
+  defp validate_upload({field, file}, changeset) do
+    case file.uploader.validate(file) do
+      :ok ->
+        changeset
+      {:error, reason} ->
+        Ecto.Changeset.add_error(changeset, field, reason)
+    end
+  end
+
+  defp do_store(record) do
+    record
+    |> extract_files()
+    |> filter_uploads()
+    |> Enum.map(&store_upload(&1, record))
+    |> Bow.combine_results()
+  end
+
+  defp store_upload({field, file}, record), do: {field, Bow.store(%{file | scope: record})}
+
+  defp do_delete(record) do
+    record
+    |> extract_files()
+    |> Enum.map(&delete_upload(&1, record))
+    |> Bow.combine_results()
+  end
+
+  defp delete_upload({field, file}, record), do: {field, Bow.delete(%{file | scope: record})}
+
+  defp extract_files(%Ecto.Changeset{changes: changes}), do: filter_files(changes)
+  defp extract_files(record), do: record |> Map.from_struct() |> filter_files()
+
+  defp filter_files(fields), do: Enum.filter(fields, &file?/1)
+  defp filter_uploads(files), do: Enum.filter(files, &upload?/1)
+
+  defp file?({_, %Bow{}}), do: true
+  defp file?(_), do: false
+
+  defp upload?({_, %Bow{path: path}}), do: path != nil
 end
