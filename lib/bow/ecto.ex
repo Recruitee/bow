@@ -200,6 +200,8 @@ defmodule Bow.Ecto do
       |> Bow.Ecto.store!()
   """
   @spec store!(Ecto.Schema.t) :: Ecto.Chema.t | no_return
+  def store!({:error, _} = err), do: err
+  def store!({:ok, record}), do: {:ok, store!(record)}
   def store!(record) do
     case store(record) do
       {:ok, record, _} -> record
@@ -224,7 +226,7 @@ defmodule Bow.Ecto do
   def load(record, field) do
     record
     |> Map.fetch!(field)
-    |> do_load(recorD)
+    |> do_load(record)
   end
 
   @doc """

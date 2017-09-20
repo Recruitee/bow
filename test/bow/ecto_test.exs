@@ -323,4 +323,15 @@ defmodule Bow.EctoTest do
       assert_raise KeyError, fn -> Bow.Ecto.url(%User{}, :nope) end
     end
   end
+
+  describe "ok/error tuples" do
+    test "handle error tuples" do
+      assert Bow.Ecto.store!({:error, :reason}) == {:error, :reason}
+    end
+
+    test "handle ok tuple" do
+      user = %User{}
+      assert Bow.Ecto.store!({:ok, user}) == {:ok, user}
+    end
+  end
 end
