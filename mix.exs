@@ -40,7 +40,7 @@ defmodule Bow.Mixfile do
   defp deps do
     [
       {:plug,     "~> 1.0"},
-      {:tesla,    "~> 0.7", github: "teamon/tesla", branch: "adapter-override"},
+      {:tesla,    "~> 0.7", github: "teamon/tesla", branch: "master"},
 
       {:ecto,       ">= 2.0.0 and < 2.2.0", optional: true},
       {:erlexec,    "~> 1.7.0", optional: true},
