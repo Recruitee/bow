@@ -89,7 +89,7 @@ defmodule Bow.EctoTest do
         |> Bow.Ecto.store()
 
       assert user.avatar == nil
-      assert results == []
+      assert results == %{}
     end
 
     test "cast when insert/update" do
@@ -102,7 +102,9 @@ defmodule Bow.EctoTest do
         |> Repo.insert!
         |> Bow.Ecto.store()
 
-      assert results[:avatar] == {:ok, [original: :ok, thumb: :ok]}
+      assert results == %{
+        avatar: %{original: :ok, thumb: :ok}
+      }
       assert %Bow{name: "bear.png"} = user.avatar
       assert File.exists?("tmp/bow/users/#{user.id}/bear.png")
 
@@ -332,6 +334,32 @@ defmodule Bow.EctoTest do
     test "handle ok tuple" do
       user = %User{}
       assert Bow.Ecto.store!({:ok, user}) == {:ok, user}
+    end
+  end
+
+  describe "combine_results/1" do
+    test "with error" do
+      assert Bow.Ecto.combine_results(
+        [
+          avatar: {:error, %{original: :ok, thumb: {:error, "oups"}}},
+          photo:  {:ok, %{original: :ok}}
+        ]
+      ) == {:error, %{
+        avatar: %{original: :ok, thumb: {:error, "oups"}},
+        photo:  %{original: :ok}
+      }}
+    end
+
+    test "all ok" do
+      assert Bow.Ecto.combine_results(
+        [
+          avatar: {:ok, %{thumb:    :ok}},
+          photo:  {:ok, %{original: :ok}}
+        ]
+      ) == {:ok, %{
+        avatar: %{thumb: :ok},
+        photo:  %{original: :ok}
+      }}
     end
   end
 end

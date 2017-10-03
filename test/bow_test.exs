@@ -176,7 +176,9 @@ defmodule BowTest do
 
     test "upload .jpg and thumb file in correct directory" do
       file = ThumbnailUploader.new(path: @file_cat)
-      assert {:ok, _results} = Bow.store(file)
+      assert {:ok, results} = Bow.store(file)
+      assert results.original == :ok
+      assert results.thumb == :ok
 
       assert File.exists?("tmp/bow/thumbnail/cat.jpg")
       assert File.exists?("tmp/bow/thumbnail/thumb_cat.jpg")
@@ -186,7 +188,9 @@ defmodule BowTest do
 
     test "upload .gif but store only thumb" do
       file = ThumbnailUploader.new(path: @file_roomba)
-      assert {:ok, _results} = Bow.store(file)
+      assert {:ok, results} = Bow.store(file)
+      assert results.thumb == :ok
+      refute results[:original]
 
       refute File.exists?("tmp/bow/thumbnail/roomba.gif")
       assert File.exists?("tmp/bow/thumbnail/thumb_roomba.gif")
@@ -253,9 +257,10 @@ defmodule BowTest do
     test "upload .pdf and generate thumb image" do
       file = PipelineUploader.new(path: @file_report)
       assert {:ok, results} = Bow.store(file)
-      assert results[:original] == :ok
-      assert results[:thumb] == :ok
-      assert length(results) == 2
+      assert results == %{
+        original: :ok,
+        thumb:    :ok
+      }
 
       assert File.exists?("tmp/bow/pipeline/report.pdf")
       assert File.exists?("tmp/bow/pipeline/thumb_report.png")
@@ -264,10 +269,11 @@ defmodule BowTest do
     test "upload .doc, generate pdf and pdf thumb image" do
       file = PipelineUploader.new(path: @file_cv)
       assert {:ok, results} = Bow.store(file)
-      assert results[:original] == :ok
-      assert results[:pdf] == :ok
-      assert results[:thumb] == :ok
-      assert length(results) == 3
+      assert results == %{
+        original: :ok,
+        pdf:      :ok,
+        thumb:    :ok
+      }
 
       assert File.exists?("tmp/bow/pipeline/cv.docx")
       assert File.exists?("tmp/bow/pipeline/cv.pdf")
@@ -277,11 +283,12 @@ defmodule BowTest do
     test "upload .png and generate three nested thumbnails" do
       file = PipelineUploader.new(path: @file_bear)
       assert {:ok, results} = Bow.store(file)
-      assert results[:original] == :ok
-      assert results[:image_thumb1] == :ok
-      assert results[:image_thumb2] == :ok
-      assert results[:image_thumb3] == :ok
-      assert length(results) == 4
+      assert results == %{
+        original:     :ok,
+        image_thumb1: :ok,
+        image_thumb2: :ok,
+        image_thumb3: :ok
+      }
 
       assert File.exists?("tmp/bow/pipeline/bear.png")
       assert File.exists?("tmp/bow/pipeline/thumb1_bear.png")
@@ -296,7 +303,7 @@ defmodule BowTest do
 
     test "upload .txt and ignore it" do
       file = PipelineUploader.new(path: @file_memo)
-      assert {:ok, []} = Bow.store(file)
+      assert {:ok, %{}} = Bow.store(file)
     end
   end
 
@@ -364,27 +371,27 @@ defmodule BowTest do
 
   describe "#combine_results" do
     test "empty" do
-      assert Bow.combine_results([]) == {:ok, []}
+      assert Bow.combine_results([]) == {:ok, %{}}
     end
 
     test "all ok" do
       assert Bow.combine_results([
         {:avatar, {:ok, "data"}},
-        {:photo,  {:ok, "cool"}}
-      ]) == {:ok, [
-        {:avatar, {:ok, "data"}},
-        {:photo,  {:ok, "cool"}}
-      ]}
+        {:photo,  :ok}
+      ]) == {:ok, %{
+        avatar: {:ok, "data"},
+        photo:  :ok
+      }}
     end
 
     test "with error" do
       assert Bow.combine_results([
         {:avatar, {:ok, "data"}},
         {:photo,  {:error, "wrong"}}
-      ]) == {:error, [
-        {:avatar, {:ok, "data"}},
-        {:photo,  {:error, "wrong"}}
-      ]}
+      ]) == {:error, %{
+        avatar: {:ok, "data"},
+        photo:  {:error, "wrong"}
+      }}
     end
   end
 

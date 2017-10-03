@@ -188,10 +188,11 @@ defmodule Bow do
     struct(file, [{key, value}])
 
   def combine_results(results) do
-    if Enum.any?(results, &match?({_, {:error, _}}, &1)) do
-      {:error, results}
-    else
-      {:ok, results}
+    Enum.reduce results, {:ok, %{}}, fn
+      {key, {:error, reason}}, {_, map} ->
+        {:error, Map.put(map, key, {:error, reason})}
+      {key, value}, {ok, map} ->
+        {ok, Map.put(map, key, value)}
     end
   end
 end

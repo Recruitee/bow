@@ -175,10 +175,11 @@ defmodule Bow.Ecto do
 
   There is also `store!/1` function that will raise error instead of returning `:ok/:error` tuple.
   """
-  @spec store(Ecto.Schema.t) :: {:ok, Ecto.Schema.t, {:ok, list}} | {:error, any}
+  @spec store(Ecto.Schema.t) :: {:ok, Ecto.Schema.t, list} | {:error, Ecto.Schema.t, any}
   def store(record) do
-    with {:ok, results} <- do_store(record) do
-      {:ok, record, results}
+    case do_store(record) do
+      {:ok, results}    -> {:ok, record, results}
+      {:error, results} -> {:error, record, results}
     end
   end
 
@@ -205,7 +206,7 @@ defmodule Bow.Ecto do
   def store!(record) do
     case store(record) do
       {:ok, record, _} -> record
-      {:error, reason} -> raise StoreError, message: inspect(reason), reason: reason
+      {:error, _, reason} -> raise StoreError, message: inspect(reason), reason: reason
     end
   end
 
@@ -317,7 +318,7 @@ defmodule Bow.Ecto do
     |> extract_files()
     |> filter_uploads()
     |> Enum.map(&store_upload(&1, record))
-    |> Bow.combine_results()
+    |> combine_results()
   end
 
   defp store_upload({field, file}, record), do: {field, Bow.store(%{file | scope: record})}
@@ -326,7 +327,7 @@ defmodule Bow.Ecto do
     record
     |> extract_files()
     |> Enum.map(&delete_upload(&1, record))
-    |> Bow.combine_results()
+    |> combine_results()
   end
 
   defp delete_upload({field, file}, record), do: {field, Bow.delete(%{file | scope: record})}
@@ -341,4 +342,17 @@ defmodule Bow.Ecto do
   defp file?(_), do: false
 
   defp upload?({_, %Bow{path: path}}), do: path != nil
+
+  # Similar to Bow.combine_results but flatten
+  # files results for easier pattern matching
+  def combine_results(results) do
+    Enum.reduce results, {:ok, %{}}, fn
+      {key, {:error, res}}, {_, map} ->
+        {:error, Map.put(map, key, res)}
+      {key, {:ok, res}}, {ok, map} ->
+        {ok, Map.put(map, key, res)}
+      {key, res}, {ok, map} ->
+        {ok, Map.put(map, key, res)}
+    end
+  end
 end
