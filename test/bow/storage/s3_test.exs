@@ -34,6 +34,17 @@ defmodule Bow.Storage.S3Test do
     assert {:error, _} = S3.load("mydir", "cat.jpg", [])
   end
 
+  test "copy file" do
+    assert :ok = S3.store(@file_cat, "mydir", "cat.jpg", [])
+    assert :ok = S3.copy("mydir", "cat.jpg", "mydir", "kitten.jpg", [])
+
+    assert {:ok, path} = S3.load("mydir", "cat.jpg", [])
+    assert File.read!(path) == File.read!(@file_cat)
+
+    assert {:ok, path} = S3.load("mydir", "kitten.jpg", [])
+    assert File.read!(path) == File.read!(@file_cat)
+  end
+
   test "unsigned url" do
     url = S3.url("mydir", "cat.jpg", [])
     assert url == "http://test-bucket.localhost/mydir/cat.jpg"

@@ -85,6 +85,28 @@ defmodule Bow do
     with {:ok, file} <- load(file), do: store(file)
   end
 
+  @doc """
+  Copy file
+  """
+  @spec copy(src :: t, dst :: t, opts) :: {:ok, t} | {:error, any}
+  def copy(src, dst, opts \\ []) do
+    if src.uploader == dst.uploader do
+      uploader = src.uploader
+
+      src
+      |> uploader.versions()
+      |> Enum.map(fn version ->
+        src_file = set(src, :name, uploader.filename(src, version))
+        dst_file = set(dst, :name, uploader.filename(dst, version))
+
+        {version, copy_file(uploader, src_file, dst_file, opts)}
+      end)
+      |> combine_results()
+    else
+      {:error, :uploader_missmatch}
+    end
+  end
+
   defp make(up, f0, fx, versions, opts) when is_list(versions) do
     versions
     |> Enum.map(&Task.async(fn -> make(up, f0, fx, &1, opts) end))
@@ -141,6 +163,16 @@ defmodule Bow do
     storage().delete(
       uploader.store_dir(file),
       file.name,
+      opts
+    )
+  end
+
+  defp copy_file(uploader, src, dst, opts) do
+    storage().copy(
+      uploader.store_dir(src),
+      src.name,
+      uploader.store_dir(dst),
+      dst.name,
       opts
     )
   end

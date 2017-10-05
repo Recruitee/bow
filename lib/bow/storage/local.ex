@@ -28,12 +28,14 @@ defmodule Bow.Storage.Local do
   @impl true
   def delete(dir, name, _opts) do
     path = Path.join([prefix(), dir, name])
-    if File.exists?(path) do
-      File.rm(path)
-      :ok
-    else
-      {:error, :file_not_found}
-    end
+    File.rm(path)
+  end
+
+  @impl true
+  def copy(src_dir, src_name, dst_dir, dst_name, _opts) do
+    src_path = Path.join([prefix(), src_dir, src_name])
+    dst_path = Path.join([prefix(), dst_dir, dst_name])
+    File.cp(src_path, dst_path)
   end
 
   @impl true

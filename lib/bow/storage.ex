@@ -24,6 +24,12 @@ defmodule Bow.Storage do
     :ok | {:error, any}
 
   @doc """
+  Copy file in storage (without loading)
+  """
+  @callback copy(dir, name, dir, name, opts) ::
+    :ok | {:error, any}
+
+  @doc """
   Generate file URL
   """
   @callback url(dir, name, opts) :: binary

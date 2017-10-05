@@ -80,6 +80,20 @@ defmodule Bow.Storage.S3 do
   end
 
   @impl true
+  def copy(src_dir, src_name, dst_dir, dst_name, opts) do
+    src_path = Path.join(src_dir, src_name)
+    dst_path = Path.join(dst_dir, dst_name)
+
+    bucket()
+    |> ExAws.S3.put_object_copy(dst_path, bucket(), src_path, opts)
+    |> ExAws.request()
+    |> case do
+      {:ok, %{status_code: 200}} -> :ok
+      error -> error
+    end
+  end
+
+  @impl true
   def url(dir, name, opts) do
     key = Path.join(dir, name)
     case Keyword.pop(opts, :signed) do

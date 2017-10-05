@@ -474,4 +474,46 @@ defmodule BowTest do
       assert File.exists?("tmp/bow/regenerate/thumb_cat.jpg")
     end
   end
+
+  describe "Copy" do
+    defmodule CopyUploader do
+      use Bow.Uploader
+
+      def versions(_), do: [:original, :thumb]
+
+      def transform(source, target, :original), do: transform_original(source, target)
+      def transform(source, target, :thumb), do: Convert.copy(source, target)
+
+      def filename(file, :original),  do: file.name
+      def filename(file, version),    do: "#{version}_#{file.name}"
+
+      def store_dir(_) do
+        "copy"
+      end
+    end
+
+    test "#store" do
+      file = CopyUploader.new(path: @file_cat)
+      assert {:ok, _results} = Bow.store(file)
+
+      copy = Bow.set(file, :rootname, "kitten")
+      assert {:ok, results} = Bow.copy(file, copy)
+      assert results == %{
+        original: :ok,
+        thumb: :ok
+      }
+
+      assert File.exists?("tmp/bow/copy/cat.jpg")
+      assert File.exists?("tmp/bow/copy/kitten.jpg")
+      assert File.exists?("tmp/bow/copy/thumb_cat.jpg")
+      assert File.exists?("tmp/bow/copy/thumb_kitten.jpg")
+
+      assert File.read!(@file_cat) == File.read!("tmp/bow/copy/cat.jpg")
+      assert File.read!(@file_cat) == File.read!("tmp/bow/copy/kitten.jpg")
+
+
+      assert File.read!("tmp/bow/copy/thumb_cat.jpg")
+          == File.read!("tmp/bow/copy/thumb_kitten.jpg")
+    end
+  end
 end
