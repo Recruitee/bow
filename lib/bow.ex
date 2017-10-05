@@ -173,7 +173,7 @@ defmodule Bow do
       src.name,
       uploader.store_dir(dst),
       dst.name,
-      opts
+      opts ++ uploader.store_options(dst)
     )
   end
 
