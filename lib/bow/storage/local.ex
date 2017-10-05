@@ -33,8 +33,11 @@ defmodule Bow.Storage.Local do
 
   @impl true
   def copy(src_dir, src_name, dst_dir, dst_name, _opts) do
+    dst_dir  = Path.join([prefix(), dst_dir])
+    dst_path = Path.join([dst_dir, dst_name])
     src_path = Path.join([prefix(), src_dir, src_name])
-    dst_path = Path.join([prefix(), dst_dir, dst_name])
+
+    File.mkdir_p!(dst_dir)
     File.cp(src_path, dst_path)
   end
 

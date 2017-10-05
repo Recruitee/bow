@@ -326,6 +326,30 @@ defmodule Bow.EctoTest do
     end
   end
 
+  describe "Copy" do
+    test "copy avatar with all versions" do
+      {:ok, user, _} =
+        User.changeset(%{"name" => "Jon", "avatar" => @upload_bear})
+        |> Repo.insert!
+        |> Bow.Ecto.store()
+
+      clone =
+        User.changeset(%{"name" => "Bran"})
+        |> Repo.insert!
+
+      assert {:ok, results} = Bow.Ecto.copy(user, :avatar, clone)
+      assert results == %{
+        original: :ok,
+        thumb: :ok
+      }
+
+      assert File.exists?("tmp/bow/users/#{user.id}/bear.png")
+      assert File.exists?("tmp/bow/users/#{clone.id}/bear.png")
+      assert File.exists?("tmp/bow/users/#{user.id}/thumb_bear.png")
+      assert File.exists?("tmp/bow/users/#{clone.id}/thumb_bear.png")
+    end
+  end
+
   describe "ok/error tuples" do
     test "handle error tuples" do
       assert Bow.Ecto.store!({:error, :reason}) == {:error, :reason}

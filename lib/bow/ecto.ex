@@ -248,6 +248,32 @@ defmodule Bow.Ecto do
     end
   end
 
+  @doc """
+  Copy file from one record to another
+
+  Fields do not have be the same unless they use the same uploader
+
+  Example
+
+      user1 = Repo.get(1)
+      user2 = Repo.get(2)
+
+      Ecto.Bow.copy(user1, :avatar, user2)
+  """
+  @spec copy(src :: Ecto.Schema.t, field :: atom, dst :: Ecto.Schema.t) ::
+    {:ok, Ecto.Schema.t} |
+    {:error, any}
+  def copy(src, src_field, dst) do
+    case Map.fetch!(src, src_field) do
+      nil ->
+        {:error, :missing}
+      file ->
+        src_file = Bow.set(file, :scope, src)
+        dst_file = Bow.set(src_file, :scope, dst)
+        Bow.copy(src_file, dst_file)
+    end
+  end
+
 
   @doc """
   Generate URL for record & field
