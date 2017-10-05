@@ -51,6 +51,8 @@ defmodule Bow.Storage.S3 do
       {:ok, %{status_code: 200}} -> :ok
       error -> error
     end
+  rescue
+    ex in ExAws.Error -> {:error, ex}
   end
 
   @impl true
@@ -77,6 +79,8 @@ defmodule Bow.Storage.S3 do
       {:ok, %{status_code: 204}} -> :ok
       error -> error
     end
+  rescue
+    ex in ExAws.Error -> {:error, ex}
   end
 
   @impl true
@@ -91,6 +95,8 @@ defmodule Bow.Storage.S3 do
       {:ok, %{status_code: 200}} -> :ok
       error -> error
     end
+  rescue
+    ex in ExAws.Error -> {:error, ex}
   end
 
   @impl true
