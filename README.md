@@ -139,6 +139,18 @@ end
 mix test
 ```
 
+#### Testing ecto integration
+
+```bash
+# edit config/config.exs
+
+# create test database
+MIX_ENV=test mix ecto.create
+
+# run tests
+mix test --only ecto
+```
+
 #### Testing S3 adapter
 
 ```bash

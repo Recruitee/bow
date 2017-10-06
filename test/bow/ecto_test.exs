@@ -1,19 +1,29 @@
 defmodule Bow.EctoTest do
   use ExUnit.Case
 
+  @moduletag :ecto
+
   alias Bow.Repo
 
   setup_all do
-    Mix.Task.run "ecto.reset"
-    Repo.start_link()
-    Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
-
+    {:ok, _} = Repo.start_link()
     :ok
   end
 
   setup do
-    Bow.Storage.Local.reset!
     Ecto.Adapters.SQL.Sandbox.checkout(Repo)
+
+    {:ok, _} = Ecto.Adapters.SQL.query(Repo, """
+      CREATE TEMPORARY TABLE "bow-test-users" (
+        id      SERIAL PRIMARY KEY,
+        name    VARCHAR(255),
+        avatar  VARCHAR(255)
+      )
+      ON COMMIT DROP
+    """, [])
+
+    Bow.Storage.Local.reset!
+    :ok
   end
 
   defmodule Avatar do
@@ -35,7 +45,7 @@ defmodule Bow.EctoTest do
   defmodule User do
     use Ecto.Schema
 
-    schema "users" do
+    schema "bow-test-users" do
       field :name,    :string
       field :avatar,  Avatar.Type
     end

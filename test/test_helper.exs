@@ -1,1 +1,1 @@
-ExUnit.start(exclude: [:s3])
+ExUnit.start(exclude: [:s3, :ecto])
