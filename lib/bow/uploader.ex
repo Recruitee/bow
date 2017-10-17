@@ -59,11 +59,11 @@ defmodule Bow.Uploader do
 
   ## Direct usage
 
-      file = MyUploader.new("path/to/file")
+      file = MyUploader.new(path: "path/to/file")
       Bow.store(file)
 
-      # you can optionally specify custom name and/or scope
-      file = MyUploader.new("path/to/file", name: "avatar.png", scope: %{id: 1})
+      # you can pass any options that are valid for `Bow.new/1`
+      file = MyUploader.new(name: "avatar.png", scope: %{id: 1})
 
   ## Integration with Ecto
 
