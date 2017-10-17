@@ -173,6 +173,20 @@ end
 ```
 
 
+### Validation
+
+You can overwrite `validate/1` to add validations for e.g. allowed extension.
+
+```elixir
+defmodule AvatarUploader do
+  # ...
+  def validate(%{ext: ext}) when ext in ~w(.jpg .png), do: :ok
+  def validate(_), do: {:error, :extension_not_allowed}
+  # ...
+end
+```
+
+
 ### Using Bow in test environment
 
 It is best to use local storage adapter when testing.
