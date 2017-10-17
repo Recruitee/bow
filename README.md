@@ -153,6 +153,25 @@ Bow.Ecto.url(user, :avatar, :thumb) # url of avatar thumb
 Bow.Ecto.url(user, :photo, :thumb, signed: true) # you can pass storage-specific options
 ```
 
+### Overwriting file name
+
+You can change the file name using uploader's `cast/1` callback:
+
+```elixir
+defmodule TimestampUploader do
+  use Bow.Uploader
+  use Bow.Ecto
+
+  def cast(file) do
+    # replace "myfile.png" with "avatar_12343456.png"
+    ts = DateTime.utc_now |> DateTime.to_unix
+    Bow.set(file, :rootname, "avatar_#{ts}")
+  end
+
+  def store_dir(_file), do: "timestamp"
+end
+```
+
 
 ### Using Bow in test environment
 
