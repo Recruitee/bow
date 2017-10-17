@@ -132,8 +132,19 @@ with {:ok, user}    <- Repo.insert(changeset),
 end
 ```
 
+### Using Bow in test environment
 
-## Testing
+It is best to use local storage adapter when testing.
+
+```elixir
+# config/test.exs
+config :bow,
+  storage: Bow.Storage.Local,
+  storage_prefix: "tmp/bow/"
+```
+
+
+## Running Bow tests
 
 ```bash
 mix test
@@ -162,3 +173,4 @@ fakes3 -r tmp/s3 -p 4567
 
 # run tests
 mix test --only s3
+```
