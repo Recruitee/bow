@@ -132,6 +132,28 @@ with {:ok, user}    <- Repo.insert(changeset),
 end
 ```
 
+### Getting file URL
+
+With standalone uploaders:
+
+```elixir
+file = MyUploader.new("path/to/file.png")
+
+Bow.url(file)         # => url of original file
+Bow.url(file, :thumb) # => url of thumb version
+```
+
+With Ecto integration:
+
+```elixir
+user = Repo.get(User, 1)
+
+Bow.Ecto.url(user, :avatar) # url of avatar original
+Bow.Ecto.url(user, :avatar, :thumb) # url of avatar thumb
+Bow.Ecto.url(user, :photo, :thumb, signed: true) # you can pass storage-specific options
+```
+
+
 ### Using Bow in test environment
 
 It is best to use local storage adapter when testing.
