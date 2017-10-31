@@ -13,23 +13,33 @@ defmodule Bow.ExecTest do
   end
 
   test "successful command", %{source: source, target: target} do
-    assert {:ok, %Bow{path: path}} = exec(source, target, "test/scripts/copy.sh ${input} ${output}")
+    assert {:ok, %Bow{path: path}} = exec(source, target, ["test/scripts/copy.sh", :input, :output])
     assert path != nil
     assert File.exists?(path)
   end
 
   test "command not found", %{source: source, target: target} do
-    assert {:error, reason} = exec(source, target, "test/scripts/notfound ${input} ${output}")
-    assert reason[:output] =~ ~r/no such file/u
+    assert {:error, reason} = exec(source, target, ["test/scripts/notfound", :input, :output])
+    assert reason[:output] =~ ~r/No such file/u
   end
 
   test "failing command", %{source: source, target: target} do
-    assert {:error, reason} = exec(source, target, "test/scripts/fail.sh ${input} ${output}")
+    assert {:error, reason} = exec(source, target, ["test/scripts/fail.sh", :input, :output])
     assert reason[:exit_code] != 0
   end
 
   test "timout", %{source: source, target: target} do
-    assert {:error, reason} = exec(source, target, "test/scripts/sleep.sh ${input} ${output}", timeout: 500)
+    assert {:error, reason} = exec(source, target, ["test/scripts/sleep.sh", :input, :output], timeout: 500)
     assert reason[:exit_code] == :timeout
+  end
+
+  test "file name with quotes" do
+    file = "tmp/asdf'weird$name.pdf"
+    File.write!(file, "data")
+    source = Bow.new(path: file)
+    target = Bow.set(source, :name, "thumb_#{source.name}")
+    assert {:ok, %Bow{path: path}} = exec(source, target, ["test/scripts/copy.sh", :input, :output])
+    assert path != nil
+    assert File.exists?(path)
   end
 end
