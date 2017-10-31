@@ -1,3 +1,3 @@
 #!/bin/bash
 set -e
-cp $1 $2
+cp "$1" "$2"
