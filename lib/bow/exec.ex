@@ -36,7 +36,7 @@ defmodule Bow.Exec do
     timeout = opts[:timeout] || default_timeout()
 
     source_path = source.path
-    target_path = Plug.Upload.random_file!("bow-exec")
+    target_path = Plug.Upload.random_file!("bow-exec") <> target.ext
 
     cmd = command
       |> Enum.map(fn
