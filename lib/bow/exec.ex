@@ -31,7 +31,7 @@ defmodule Bow.Exec do
       end
 
   """
-  @spec exec(Bow.t, Bow.t, String.t, keyword) :: {:ok, Bow.t} | {:error, any}
+  @spec exec(Bow.t, Bow.t, [String.t], keyword) :: {:ok, Bow.t} | {:error, any}
   def exec(source, target, command, opts \\ []) do
     timeout = opts[:timeout] || default_timeout()
 
@@ -39,9 +39,13 @@ defmodule Bow.Exec do
     target_path = Plug.Upload.random_file!("bow-exec")
 
     cmd = command
-      |> String.replace("${input}", source_path)
-      |> String.replace("${output}", target_path)
-      |> to_charlist
+      |> Enum.map(fn
+        {:input, idx} when is_integer(idx) -> "#{source_path}[#{idx}]"
+        :input -> source_path
+        :output -> target_path
+        arg -> arg
+      end)
+      |> Enum.map(&to_char_list/1)
 
     trapping fn ->
       case :exec.run_link(cmd, [stdout: self(), stderr: self()]) do
