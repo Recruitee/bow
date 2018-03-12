@@ -38,4 +38,5 @@ defmodule Bow.Download do
   end
 
   defp encode(url), do: url |> URI.encode() |> String.replace(~r/%25([0-9a-f]{2})/i, "%\\g{1}")
+  # based on: https://stackoverflow.com/questions/31825687/how-to-avoid-double-encoding-uri
 end
