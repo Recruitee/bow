@@ -8,7 +8,7 @@ defmodule Bow.Download do
   """
   @spec download(client :: Tesla.Client.t | nil, url :: String.t) :: {:ok, Bow.t} | {:error, any}
   def download(client \\ %Tesla.Client{}, url) do
-    case get(client, URI.encode(url)) do
+    case get(client, encode(url)) do
       %{status: 200, url: url, body: body, headers: headers} ->
         base = url |> URI.parse |> Map.get(:path) |> Path.basename
         name = case Map.fetch(headers, "content-type") do
@@ -36,4 +36,6 @@ defmodule Bow.Download do
     ex in Tesla.Error ->
       {:error, ex}
   end
+
+  defp encode(url), do: url |> URI.encode() |> String.replace(~r/%25([0-9a-f]{2})/i, "%\\g{1}")
 end
