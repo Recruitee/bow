@@ -16,7 +16,8 @@ def deps do
     {:bow, "~> 0.1.0"},
 
     # for AWS S3 support
-    {:ex_aws, "~> 1.1.4"},
+    {:ex_aws, "~> 2.0"},
+    {:ex_aws_s3, "~> 2.0"},
 
     # for Bow.Exec
     {:erlexec,  "~> 1.7.0"}

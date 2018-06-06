@@ -52,7 +52,7 @@ defmodule Bow.Storage.S3Test do
 
   test "signed url" do
     url = S3.url("mydir", "cat.jpg", signed: true)
-    assert "http://test-bucket.localhost/mydir/cat.jpg" <> _ = url
+    assert "http://test-bucket.localhost:4567/mydir/cat.jpg" <> _ = url
     assert String.contains?(url, "X-Amz-Signature")
   end
 end

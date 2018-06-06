@@ -44,7 +44,8 @@ defmodule Bow.Mixfile do
 
       {:ecto,       ">= 2.0.0 and < 2.2.0", optional: true},
       {:erlexec,    "~> 1.7.0", optional: true},
-      {:ex_aws,     "~> 1.1.4", optional: true},
+      {:ex_aws,     "~> 2.0", optional: true},
+      {:ex_aws_s3,  "~> 2.0", optional: true},
       {:sweet_xml,  "~> 0.6.5", optional: true},
 
       # testing & docs
