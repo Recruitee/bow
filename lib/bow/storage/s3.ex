@@ -43,13 +43,21 @@ defmodule Bow.Storage.S3 do
 
   @impl true
   def store(path, dir, name, opts) do
-    path
-    |> ExAws.S3.Upload.stream_file()
-    |> ExAws.S3.upload(bucket(), Path.join(dir, name), opts)
-    |> ExAws.request()
-    |> case do
-      {:ok, %{status_code: 200}} -> :ok
-      error -> error
+    if File.stat!(path).size == 0 do
+      # Currently stream_file() doesn't work with empty files
+      # ( https://github.com/ex-aws/ex_aws_s3/issues/3 ),
+      # so let's do it in the more simple way in that case.
+      ExAws.S3.put_object(bucket(), Path.join(dir, name), "")
+      |> ExAws.request!
+    else
+      path
+      |> ExAws.S3.Upload.stream_file()
+      |> ExAws.S3.upload(bucket(), Path.join(dir, name), opts)
+      |> ExAws.request()
+      |> case do
+        {:ok, %{status_code: 200}} -> :ok
+        error -> error
+      end
     end
   rescue
     ex in ExAws.Error -> {:error, ex}
