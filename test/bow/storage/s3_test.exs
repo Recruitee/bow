@@ -18,6 +18,12 @@ defmodule Bow.Storage.S3Test do
     assert File.read!(path) == File.read!(@file_cat)
   end
 
+  test "store & load empty file" do
+    assert :ok = S3.store(@file_cat, "mydir", "empty-file.txt", [])
+    assert {:ok, path} = S3.load("mydir", "empty-file.txt", [])
+    assert File.read!(path) == File.read!(@file_cat)
+  end
+
   test "store as private" do
     assert :ok = S3.store(@file_cat, "mydir", "cat.jpg", acl: :private)
     assert {:ok, path} = S3.load("mydir", "cat.jpg", [])
