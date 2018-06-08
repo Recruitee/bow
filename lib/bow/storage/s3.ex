@@ -48,7 +48,11 @@ defmodule Bow.Storage.S3 do
       # ( https://github.com/ex-aws/ex_aws_s3/issues/3 ),
       # so let's do it in the more simple way in that case.
       ExAws.S3.put_object(bucket(), Path.join(dir, name), "")
-      |> ExAws.request!
+      |> ExAws.request()
+      |> case do
+        {:ok, %{status_code: 200}} -> :ok
+        error -> error
+      end
     else
       path
       |> ExAws.S3.Upload.stream_file()
