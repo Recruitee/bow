@@ -39,7 +39,7 @@ defmodule Bow.Storage.S3 do
     end
   end
 
-  defp expire_in, do: Application.get_env(:bow, :expire_in, 24 * 60 * 60)
+  defp expires_in, do: Application.get_env(:bow, :expires_in, 24 * 60 * 60)
 
   @impl true
   def store(path, dir, name, opts) do
@@ -123,7 +123,7 @@ defmodule Bow.Storage.S3 do
   defp signed_url(key, opts) do
     opts =
       opts
-      |> Keyword.put_new(:expire_in, expire_in())
+      |> Keyword.put_new(:expires_in, expires_in())
       |> Keyword.put_new(:virtual_host, true)
 
     {:ok, url} = ExAws.S3.presigned_url(ExAws.Config.new(:s3), :get, bucket(), key, opts)
