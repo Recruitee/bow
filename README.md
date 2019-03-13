@@ -3,6 +3,7 @@
 File uploads for Elixir
 
 ## Features
+
 - Generate multiple dependent versions of a file
 - Integration with Ecto
 - Allow downloading remote files (`remote_avatar_url` params etc.)
@@ -26,7 +27,6 @@ end
 ```
 
 ## Usage
-
 
 ### Minimal uploader definition
 
@@ -77,7 +77,7 @@ defmodule AttachmentUploader do
 
   # specify storage options
   def store_options(_file) do
-    %{acl: :private}
+    [acl: :public_read]
   end
 end
 ```
@@ -173,7 +173,6 @@ defmodule TimestampUploader do
 end
 ```
 
-
 ### Validation
 
 You can overwrite `validate/1` to add validations for e.g. allowed extension.
@@ -187,7 +186,6 @@ defmodule AvatarUploader do
 end
 ```
 
-
 ### Using Bow in test environment
 
 It is best to use local storage adapter when testing.
@@ -198,7 +196,6 @@ config :bow,
   storage: Bow.Storage.Local,
   storage_prefix: "tmp/bow/"
 ```
-
 
 ## Running Bow tests
 

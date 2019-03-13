@@ -52,7 +52,7 @@ defmodule Bow.Uploader do
 
         # specify storage options
         def store_options(_file) do
-          %{acl: :private}
+          [acl: :public_read]
         end
       end
 
@@ -69,7 +69,6 @@ defmodule Bow.Uploader do
 
   See `Bow.Ecto` for usage with `Ecto.Schema`
   """
-
 
   @doc """
   Defines storage dir for given file.
@@ -95,7 +94,7 @@ defmodule Bow.Uploader do
       end
 
   """
-  @callback store_dir(file :: Bow.t) :: String.t
+  @callback store_dir(file :: Bow.t()) :: String.t()
 
   @doc """
   Defines store custom options.
@@ -107,12 +106,12 @@ defmodule Bow.Uploader do
       defmodule MyUploader do
         # ...
         def store_options(_file) do
-          %{acl: :private}
+          [acl: :public_read]
         end
       end
 
   """
-  @callback store_options(file :: Bow.t) :: map()
+  @callback store_options(file :: Bow.t()) :: keyword()
 
   @doc """
   Return list of versions to be generated for given file.
@@ -142,8 +141,7 @@ defmodule Bow.Uploader do
       end
 
   """
-  @callback versions(file :: Bow.t) :: [atom]
-
+  @callback versions(file :: Bow.t()) :: [atom]
 
   @doc """
   Customize filenames for given version.
@@ -165,8 +163,7 @@ defmodule Bow.Uploader do
         def filename(file, version),     do: "\#{version}_\#{file.name}"
       end
   """
-  @callback filename(file :: Bow.t, version :: atom) :: String.t
-
+  @callback filename(file :: Bow.t(), version :: atom) :: String.t()
 
   @doc """
   Define transformation to given version.
@@ -201,10 +198,10 @@ defmodule Bow.Uploader do
         end
       end
   """
-  @callback transform(source :: Bow.t, target :: Bow.t, version :: atom) ::
-    {:ok, target :: Bow.t} |
-    {:ok, target :: Bow.t, next_versions :: [atom]} |
-    {:error, reason :: any}
+  @callback transform(source :: Bow.t(), target :: Bow.t(), version :: atom) ::
+              {:ok, target :: Bow.t()}
+              | {:ok, target :: Bow.t(), next_versions :: [atom]}
+              | {:error, reason :: any}
 
   @doc """
   Validate incoming file before processing.
@@ -219,8 +216,7 @@ defmodule Bow.Uploader do
         def validate(_), do: {:error, :extension_not_allowed}
       end
   """
-  @callback validate(file :: Bow.t) :: :ok | {:error, reason :: any}
-
+  @callback validate(file :: Bow.t()) :: :ok | {:error, reason :: any}
 
   defmacro __using__(_) do
     quote do
@@ -235,24 +231,24 @@ defmodule Bow.Uploader do
 
       # default store options
       def store_options(_file), do: []
-      defoverridable [store_options: 1]
+      defoverridable store_options: 1
 
       # by default always store just the original
       def versions(_), do: [:original]
-      defoverridable [versions: 1]
+      defoverridable versions: 1
 
       # by default use original file name
-      def filename(file, :original),  do: file.name
-      def filename(file, version),    do: "#{version}_#{file.name}"
-      defoverridable [filename: 2]
+      def filename(file, :original), do: file.name
+      def filename(file, version), do: "#{version}_#{file.name}"
+      defoverridable filename: 2
 
       # by default do nothing with original (use the same path)
       def transform(source, target, _version), do: transform_original(source, target)
-      defoverridable [transform: 3]
+      defoverridable transform: 3
 
       # by default every file is valid
       def validate(file), do: :ok
-      defoverridable [validate: 1]
+      defoverridable validate: 1
     end
   end
 
