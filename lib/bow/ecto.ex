@@ -71,14 +71,14 @@ defmodule Bow.Ecto do
 
 
   """
-  @callback cast(file :: Bow.t) :: Bow.t
+  @callback cast(file :: Bow.t()) :: Bow.t()
 
   defmacro __using__(_) do
     uploader = __CALLER__.module
 
     quote do
       defmodule Type do
-        @behaviour Ecto.Type
+        use Ecto.Type
 
         def type, do: :string
 
@@ -104,14 +104,13 @@ defmodule Bow.Ecto do
       @behaviour Bow.Ecto
 
       def cast(file), do: file
-      defoverridable [cast: 1]
+      defoverridable cast: 1
     end
   end
 
   defmodule StoreError do
     defexception message: nil, reason: nil
   end
-
 
   @doc """
   Validate changeset using uploader's `validate/1` function
@@ -124,7 +123,7 @@ defmodule Bow.Ecto do
         |> Bow.Ecto.validate()
       end
   """
-  @spec validate(Ecto.Changeset.t) :: Ecto.Changeset.t
+  @spec validate(Ecto.Changeset.t()) :: Ecto.Changeset.t()
   def validate(%Ecto.Changeset{} = changeset) do
     changeset
     |> extract_files()
@@ -175,10 +174,10 @@ defmodule Bow.Ecto do
 
   There is also `store!/1` function that will raise error instead of returning `:ok/:error` tuple.
   """
-  @spec store(Ecto.Schema.t) :: {:ok, Ecto.Schema.t, list} | {:error, Ecto.Schema.t, any}
+  @spec store(Ecto.Schema.t()) :: {:ok, Ecto.Schema.t(), list} | {:error, Ecto.Schema.t(), any}
   def store(record) do
     case do_store(record) do
-      {:ok, results}    -> {:ok, record, results}
+      {:ok, results} -> {:ok, record, results}
       {:error, results} -> {:error, record, results}
     end
   end
@@ -200,17 +199,16 @@ defmodule Bow.Ecto do
       |> Repo.update!()
       |> Bow.Ecto.store!()
   """
-  @spec store!(Ecto.Schema.t) :: Ecto.Chema.t | no_return
+  @spec store!(Ecto.Schema.t()) :: Ecto.Chema.t() | no_return
   def store!({:error, _} = err), do: err
   def store!({:ok, record}), do: {:ok, store!(record)}
+
   def store!(record) do
     case store(record) do
       {:ok, record, _} -> record
       {:error, _, reason} -> raise StoreError, message: inspect(reason), reason: reason
     end
   end
-
-
 
   @doc """
   Load file from storage
@@ -223,7 +221,7 @@ defmodule Bow.Ecto do
       end
 
   """
-  @spec load(Ecto.Schema.t, field :: atom) :: {:ok, Bow.t} | {:error, any}
+  @spec load(Ecto.Schema.t(), field :: atom) :: {:ok, Bow.t()} | {:error, any}
   def load(record, field) do
     record
     |> Map.fetch!(field)
@@ -241,7 +239,7 @@ defmodule Bow.Ecto do
       |> Bow.Ecto.delete()
 
   """
-  @spec delete(Ecto.Schema.t) :: {:ok, Ecto.Schema.t} | {:error, any}
+  @spec delete(Ecto.Schema.t()) :: {:ok, Ecto.Schema.t()} | {:error, any}
   def delete(record) do
     with {:ok, _} <- do_delete(record) do
       {:ok, record}
@@ -260,13 +258,14 @@ defmodule Bow.Ecto do
 
       Ecto.Bow.copy(user1, :avatar, user2)
   """
-  @spec copy(src :: Ecto.Schema.t, field :: atom, dst :: Ecto.Schema.t) ::
-    {:ok, Ecto.Schema.t} |
-    {:error, any}
+  @spec copy(src :: Ecto.Schema.t(), field :: atom, dst :: Ecto.Schema.t()) ::
+          {:ok, Ecto.Schema.t()}
+          | {:error, any}
   def copy(src, src_field, dst) do
     case Map.fetch!(src, src_field) do
       nil ->
         {:error, :missing}
+
       file ->
         src_file = Bow.set(file, :scope, src)
         dst_file = Bow.set(src_file, :scope, dst)
@@ -274,13 +273,13 @@ defmodule Bow.Ecto do
     end
   end
 
-
   @doc """
   Generate URL for record & field
   """
   def url(record, field), do: url(record, field, [])
   def url(record, field, opts) when is_list(opts), do: url(record, field, :original, opts)
   def url(record, field, version), do: url(record, field, version, [])
+
   def url(record, field, version, opts) do
     record
     |> Map.fetch!(field)
@@ -303,20 +302,25 @@ defmodule Bow.Ecto do
   def download_params(params, fields, client \\ %Tesla.Client{}) do
     Enum.reduce(fields, params, fn field, params ->
       field = to_string(field)
+
       case params["remote_#{field}_url"] do
-        nil -> params
-        ""  -> params
+        nil ->
+          params
+
+        "" ->
+          params
+
         url ->
           case Bow.Download.download(client, url) do
             {:ok, file} -> Map.put(params, field, file)
-            _           -> params
+            _ -> params
           end
       end
     end)
   end
 
-
   defp do_load(nil, _), do: {:error, :missing}
+
   defp do_load(file, record) do
     file
     |> Bow.set(:scope, record)
@@ -324,6 +328,7 @@ defmodule Bow.Ecto do
   end
 
   defp do_url(nil, _, _, _), do: nil
+
   defp do_url(file, record, version, opts) do
     file
     |> Bow.set(:scope, record)
@@ -334,6 +339,7 @@ defmodule Bow.Ecto do
     case file.uploader.validate(file) do
       :ok ->
         changeset
+
       {:error, reason} ->
         Ecto.Changeset.add_error(changeset, field, reason)
     end
@@ -372,13 +378,15 @@ defmodule Bow.Ecto do
   # Similar to Bow.combine_results but flatten
   # files results for easier pattern matching
   def combine_results(results) do
-    Enum.reduce results, {:ok, %{}}, fn
+    Enum.reduce(results, {:ok, %{}}, fn
       {key, {:error, res}}, {_, map} ->
         {:error, Map.put(map, key, res)}
+
       {key, {:ok, res}}, {ok, map} ->
         {ok, Map.put(map, key, res)}
+
       {key, res}, {ok, map} ->
         {ok, Map.put(map, key, res)}
-    end
+    end)
   end
 end
