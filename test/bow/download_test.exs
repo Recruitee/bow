@@ -6,53 +6,49 @@ defmodule Bow.DownloadTest do
   import Bow.Download, only: [download: 2]
 
   setup do
-    client = Tesla.build_adapter fn env ->
-      case env do
-        %{url: "http://example.com/cat.png"} ->
-          %{env |
-            status: 200,
-            body: File.read!(@file_cat),
-            headers: %{"Content-Type" => "image/png"}
-          }
-        %{url: "http://example.com/kitten.png"} ->
-          %{env |
-            status: 301,
-            headers: %{"Location" => "http://example.com/cat.png"}
-          }
-        %{url: "http://example.com/loop.png"} ->
-          %{env |
-            status: 301,
-            headers: %{"Location" => "http://example.com/loop.png"}
-          }
-        %{url: "http://example.com/notype.png"} ->
-          %{env |
-            status: 200,
-            body: File.read!(@file_cat)
-          }
-        %{url: "http://example.com/noext"} ->
-          %{env |
-            status: 200,
-            body: File.read!(@file_cat)
-          }
-        %{url: "http://example.com/u" <> _} ->
-          %{env |
-            status: 200,
-            body: File.read!(@file_cat),
-            headers: %{"Content-Type" => "image/png"}
-          }
-        %{url: "http://example.com/dog.jpg"} ->
-          %{env |
-            status: 200,
-            body: File.read!(@file_cat),
-            headers: %{"Content-Type" => "example/dog/nope"}
-          }
-        _ ->
-          %{env |
-            status: 404,
-            body: "NotFound"
-          }
-      end
-    end
+    client =
+      Tesla.build_adapter(fn env ->
+        case env do
+          %{url: "http://example.com/cat.png"} ->
+            %{
+              env
+              | status: 200,
+                body: File.read!(@file_cat),
+                headers: %{"Content-Type" => "image/png"}
+            }
+
+          %{url: "http://example.com/kitten.png"} ->
+            %{env | status: 301, headers: %{"Location" => "http://example.com/cat.png"}}
+
+          %{url: "http://example.com/loop.png"} ->
+            %{env | status: 301, headers: %{"Location" => "http://example.com/loop.png"}}
+
+          %{url: "http://example.com/notype.png"} ->
+            %{env | status: 200, body: File.read!(@file_cat)}
+
+          %{url: "http://example.com/noext"} ->
+            %{env | status: 200, body: File.read!(@file_cat)}
+
+          %{url: "http://example.com/u" <> _} ->
+            %{
+              env
+              | status: 200,
+                body: File.read!(@file_cat),
+                headers: %{"Content-Type" => "image/png"}
+            }
+
+          %{url: "http://example.com/dog.jpg"} ->
+            %{
+              env
+              | status: 200,
+                body: File.read!(@file_cat),
+                headers: %{"Content-Type" => "example/dog/nope"}
+            }
+
+          _ ->
+            %{env | status: 404, body: "NotFound"}
+        end
+      end)
 
     {:ok, client: client}
   end
@@ -90,7 +86,7 @@ defmodule Bow.DownloadTest do
   end
 
   test "file with invalid content type", %{client: client} do
-    assert {:ok, file} = download(client,  "http://example.com/dog.jpg")
+    assert {:ok, file} = download(client, "http://example.com/dog.jpg")
     assert file.name == "dog.jpg"
     assert file.path != nil
     assert File.read!(file.path) == File.read!(@file_cat)

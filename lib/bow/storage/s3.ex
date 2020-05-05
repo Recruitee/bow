@@ -34,6 +34,7 @@ defmodule Bow.Storage.S3 do
         %{bucket: bucket, host: host} = conf = s3config()
         scheme = Map.get(conf, :scheme, "https://")
         "#{scheme}#{bucket}.#{host}"
+
       host ->
         host
     end
@@ -114,9 +115,10 @@ defmodule Bow.Storage.S3 do
   @impl true
   def url(dir, name, opts) do
     key = Path.join(dir, name)
+
     case Keyword.pop(opts, :signed) do
-      {true, opts}  -> signed_url(key, opts)
-      _             -> unsigned_url(key)
+      {true, opts} -> signed_url(key, opts)
+      _ -> unsigned_url(key)
     end
   end
 

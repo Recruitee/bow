@@ -2,25 +2,25 @@ defmodule BowTest do
   use ExUnit.Case
 
   setup do
-    Bow.Storage.Local.reset!
+    Bow.Storage.Local.reset!()
     :ok
   end
 
   defmodule Convert do
     def copy(source, target) do
-      with  {:ok, path} <- Plug.Upload.random_file("bow"),
-            :ok <- File.cp(source.path, path) do
+      with {:ok, path} <- Plug.Upload.random_file("bow"),
+           :ok <- File.cp(source.path, path) do
         {:ok, %{target | path: path}}
       end
     end
   end
 
-  @file_cat     "test/files/cat.jpg"
-  @file_bear    "test/files/bear.png"
-  @file_roomba  "test/files/roomba.gif"
-  @file_report  "test/files/report.pdf"
-  @file_cv      "test/files/cv.docx"
-  @file_memo    "test/files/memo.txt"
+  @file_cat "test/files/cat.jpg"
+  @file_bear "test/files/bear.png"
+  @file_roomba "test/files/roomba.gif"
+  @file_report "test/files/report.pdf"
+  @file_cv "test/files/cv.docx"
+  @file_memo "test/files/memo.txt"
 
   describe "#new" do
     test "raise when no name nor path" do
@@ -156,7 +156,7 @@ defmodule BowTest do
         case file.ext do
           ".jpg" -> [:original, :thumb]
           ".gif" -> [:thumb]
-          _      -> []
+          _ -> []
         end
       end
 
@@ -166,8 +166,8 @@ defmodule BowTest do
         Convert.copy(source, target)
       end
 
-      def filename(file, :original),  do: file.name
-      def filename(file, version),    do: "#{version}_#{file.name}"
+      def filename(file, :original), do: file.name
+      def filename(file, version), do: "#{version}_#{file.name}"
 
       def store_dir(_file) do
         "thumbnail"
@@ -203,10 +203,13 @@ defmodule BowTest do
 
       def versions(file) do
         case file.ext do
-          ".pdf"  -> [:original, :thumb]  # for pdf, store original and make thumb
-          ".docx" -> [:original, :pdf]    # for doc, store original and generate pdf
-          ".png"  -> [:original, :image_thumb1]
-          _       -> []                   # ignore the rest
+          # for pdf, store original and make thumb
+          ".pdf" -> [:original, :thumb]
+          # for doc, store original and generate pdf
+          ".docx" -> [:original, :pdf]
+          ".png" -> [:original, :image_thumb1]
+          # ignore the rest
+          _ -> []
         end
       end
 
@@ -216,7 +219,8 @@ defmodule BowTest do
       # convert to pdf
       def transform(source, target, :pdf) do
         with {:ok, pdf} <- Convert.copy(source, target) do
-          {:ok, pdf, [:thumb]} # and then convert to thumb
+          # and then convert to thumb
+          {:ok, pdf, [:thumb]}
         end
       end
 
@@ -242,9 +246,9 @@ defmodule BowTest do
       end
 
       # filename must return full filename with extension
-      def filename(file, :original),  do: file.name
-      def filename(file, :pdf),       do: "#{file.rootname}.pdf"
-      def filename(file, :thumb),     do: "thumb_#{file.rootname}.png"
+      def filename(file, :original), do: file.name
+      def filename(file, :pdf), do: "#{file.rootname}.pdf"
+      def filename(file, :thumb), do: "thumb_#{file.rootname}.png"
       def filename(file, :image_thumb1), do: "thumb1_#{file.name}"
       def filename(file, :image_thumb2), do: "thumb2_#{file.name}"
       def filename(file, :image_thumb3), do: "thumb3_#{file.name}"
@@ -257,10 +261,11 @@ defmodule BowTest do
     test "upload .pdf and generate thumb image" do
       file = PipelineUploader.new(path: @file_report)
       assert {:ok, results} = Bow.store(file)
+
       assert results == %{
-        original: :ok,
-        thumb:    :ok
-      }
+               original: :ok,
+               thumb: :ok
+             }
 
       assert File.exists?("tmp/bow/pipeline/report.pdf")
       assert File.exists?("tmp/bow/pipeline/thumb_report.png")
@@ -269,11 +274,12 @@ defmodule BowTest do
     test "upload .doc, generate pdf and pdf thumb image" do
       file = PipelineUploader.new(path: @file_cv)
       assert {:ok, results} = Bow.store(file)
+
       assert results == %{
-        original: :ok,
-        pdf:      :ok,
-        thumb:    :ok
-      }
+               original: :ok,
+               pdf: :ok,
+               thumb: :ok
+             }
 
       assert File.exists?("tmp/bow/pipeline/cv.docx")
       assert File.exists?("tmp/bow/pipeline/cv.pdf")
@@ -283,12 +289,13 @@ defmodule BowTest do
     test "upload .png and generate three nested thumbnails" do
       file = PipelineUploader.new(path: @file_bear)
       assert {:ok, results} = Bow.store(file)
+
       assert results == %{
-        original:     :ok,
-        image_thumb1: :ok,
-        image_thumb2: :ok,
-        image_thumb3: :ok
-      }
+               original: :ok,
+               image_thumb1: :ok,
+               image_thumb2: :ok,
+               image_thumb3: :ok
+             }
 
       assert File.exists?("tmp/bow/pipeline/bear.png")
       assert File.exists?("tmp/bow/pipeline/thumb1_bear.png")
@@ -345,9 +352,9 @@ defmodule BowTest do
     defmodule UrlUploader do
       use Bow.Uploader
 
-      def filename(file, :original),  do: file.name
-      def filename(file, :pdf),       do: "#{file.rootname}.pdf"
-      def filename(file, :thumb),     do: "thumb_#{file.name}"
+      def filename(file, :original), do: file.name
+      def filename(file, :pdf), do: "#{file.rootname}.pdf"
+      def filename(file, :thumb), do: "thumb_#{file.name}"
       def filename(file, :thumb_jpg), do: "thumb_#{file.rootname}.jpg"
 
       def store_dir(_) do
@@ -358,10 +365,10 @@ defmodule BowTest do
     test "uploader url" do
       file = UrlUploader.new(path: @file_bear)
 
-      assert Bow.url(file)              == "tmp/bow/urls/bear.png"
-      assert Bow.url(file, :pdf)        == "tmp/bow/urls/bear.pdf"
-      assert Bow.url(file, :thumb)      == "tmp/bow/urls/thumb_bear.png"
-      assert Bow.url(file, :thumb_jpg)  == "tmp/bow/urls/thumb_bear.jpg"
+      assert Bow.url(file) == "tmp/bow/urls/bear.png"
+      assert Bow.url(file, :pdf) == "tmp/bow/urls/bear.pdf"
+      assert Bow.url(file, :thumb) == "tmp/bow/urls/thumb_bear.png"
+      assert Bow.url(file, :thumb_jpg) == "tmp/bow/urls/thumb_bear.jpg"
     end
 
     test "handle nil gracefully" do
@@ -376,22 +383,26 @@ defmodule BowTest do
 
     test "all ok" do
       assert Bow.combine_results([
-        {:avatar, {:ok, "data"}},
-        {:photo,  :ok}
-      ]) == {:ok, %{
-        avatar: {:ok, "data"},
-        photo:  :ok
-      }}
+               {:avatar, {:ok, "data"}},
+               {:photo, :ok}
+             ]) ==
+               {:ok,
+                %{
+                  avatar: {:ok, "data"},
+                  photo: :ok
+                }}
     end
 
     test "with error" do
       assert Bow.combine_results([
-        {:avatar, {:ok, "data"}},
-        {:photo,  {:error, "wrong"}}
-      ]) == {:error, %{
-        avatar: {:ok, "data"},
-        photo:  {:error, "wrong"}
-      }}
+               {:avatar, {:ok, "data"}},
+               {:photo, {:error, "wrong"}}
+             ]) ==
+               {:error,
+                %{
+                  avatar: {:ok, "data"},
+                  photo: {:error, "wrong"}
+                }}
     end
   end
 
@@ -484,8 +495,8 @@ defmodule BowTest do
       def transform(source, target, :original), do: transform_original(source, target)
       def transform(source, target, :thumb), do: Convert.copy(source, target)
 
-      def filename(file, :original),  do: file.name
-      def filename(file, version),    do: "#{version}_#{file.name}"
+      def filename(file, :original), do: file.name
+      def filename(file, version), do: "#{version}_#{file.name}"
 
       def store_dir(_) do
         "copy"
@@ -498,10 +509,11 @@ defmodule BowTest do
 
       copy = Bow.set(file, :rootname, "kitten")
       assert {:ok, results} = Bow.copy(file, copy)
+
       assert results == %{
-        original: :ok,
-        thumb: :ok
-      }
+               original: :ok,
+               thumb: :ok
+             }
 
       assert File.exists?("tmp/bow/copy/cat.jpg")
       assert File.exists?("tmp/bow/copy/kitten.jpg")
@@ -511,9 +523,8 @@ defmodule BowTest do
       assert File.read!(@file_cat) == File.read!("tmp/bow/copy/cat.jpg")
       assert File.read!(@file_cat) == File.read!("tmp/bow/copy/kitten.jpg")
 
-
-      assert File.read!("tmp/bow/copy/thumb_cat.jpg")
-          == File.read!("tmp/bow/copy/thumb_kitten.jpg")
+      assert File.read!("tmp/bow/copy/thumb_cat.jpg") ==
+               File.read!("tmp/bow/copy/thumb_kitten.jpg")
     end
   end
 end

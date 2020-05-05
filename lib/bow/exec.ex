@@ -31,14 +31,15 @@ defmodule Bow.Exec do
       end
 
   """
-  @spec exec(Bow.t, Bow.t, [String.t], keyword) :: {:ok, Bow.t} | {:error, any}
+  @spec exec(Bow.t(), Bow.t(), [String.t()], keyword) :: {:ok, Bow.t()} | {:error, any}
   def exec(source, target, command, opts \\ []) do
     timeout = opts[:timeout] || default_timeout()
 
     source_path = source.path
     target_path = Plug.Upload.random_file!("bow-exec") <> target.ext
 
-    cmd = command
+    cmd =
+      command
       |> Enum.map(fn
         {:input, idx} when is_integer(idx) -> "#{source_path}[#{idx}]"
         :input -> source_path
@@ -47,8 +48,8 @@ defmodule Bow.Exec do
       end)
       |> Enum.map(&to_char_list/1)
 
-    trapping fn ->
-      case :exec.run_link(cmd, [stdout: self(), stderr: self()]) do
+    trapping(fn ->
+      case :exec.run_link(cmd, stdout: self(), stderr: self()) do
         {:ok, pid, ospid} ->
           case wait_for_exit(pid, ospid, timeout) do
             {:ok, output} ->
@@ -61,10 +62,11 @@ defmodule Bow.Exec do
             {:error, exit_code, output} ->
               {:error, output: output, exit_code: exit_code, cmd: cmd}
           end
+
         error ->
           error
       end
-    end
+    end)
   end
 
   defp trapping(fun) do
@@ -76,7 +78,7 @@ defmodule Bow.Exec do
 
   defp wait_for_exit(pid, ospid, timout) do
     receive do
-      {:EXIT, ^pid, :normal}              -> {:ok, receive_output(ospid)}
+      {:EXIT, ^pid, :normal} -> {:ok, receive_output(ospid)}
       {:EXIT, ^pid, {:exit_status, code}} -> {:error, code, receive_output(ospid)}
     after
       timout ->

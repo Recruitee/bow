@@ -5,8 +5,8 @@ defmodule Bow.Storage.Local do
 
   @impl true
   def store(file_path, dir, name, _opts) do
-    dir   = Path.join([prefix(), dir])
-    path  = Path.join([dir, name])
+    dir = Path.join([prefix(), dir])
+    path = Path.join([dir, name])
 
     File.mkdir_p!(dir)
     File.cp!(file_path, path)
@@ -18,6 +18,7 @@ defmodule Bow.Storage.Local do
   def load(dir, name, _opts) do
     # no need to download this file - just point to directly
     path = Path.join([prefix(), dir, name])
+
     if File.exists?(path) do
       {:ok, path}
     else
@@ -33,7 +34,7 @@ defmodule Bow.Storage.Local do
 
   @impl true
   def copy(src_dir, src_name, dst_dir, dst_name, _opts) do
-    dst_dir  = Path.join([prefix(), dst_dir])
+    dst_dir = Path.join([prefix(), dst_dir])
     dst_path = Path.join([dst_dir, dst_name])
     src_path = Path.join([prefix(), src_dir, src_name])
 

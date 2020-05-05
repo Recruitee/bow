@@ -13,7 +13,9 @@ defmodule Bow.ExecTest do
   end
 
   test "successful command", %{source: source, target: target} do
-    assert {:ok, %Bow{path: path}} = exec(source, target, ["test/scripts/copy.sh", :input, :output])
+    assert {:ok, %Bow{path: path}} =
+             exec(source, target, ["test/scripts/copy.sh", :input, :output])
+
     assert path != nil
     assert File.exists?(path)
   end
@@ -29,7 +31,9 @@ defmodule Bow.ExecTest do
   end
 
   test "timout", %{source: source, target: target} do
-    assert {:error, reason} = exec(source, target, ["test/scripts/sleep.sh", :input, :output], timeout: 500)
+    assert {:error, reason} =
+             exec(source, target, ["test/scripts/sleep.sh", :input, :output], timeout: 500)
+
     assert reason[:exit_code] == :timeout
   end
 
@@ -38,7 +42,10 @@ defmodule Bow.ExecTest do
     File.write!(file, "data")
     source = Bow.new(path: file)
     target = Bow.set(source, :name, "thumb_#{source.name}")
-    assert {:ok, %Bow{path: path}} = exec(source, target, ["test/scripts/copy.sh", :input, :output])
+
+    assert {:ok, %Bow{path: path}} =
+             exec(source, target, ["test/scripts/copy.sh", :input, :output])
+
     assert path != nil
     assert File.exists?(path)
   end

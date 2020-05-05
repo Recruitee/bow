@@ -13,16 +13,21 @@ defmodule Bow.EctoTest do
   setup do
     Ecto.Adapters.SQL.Sandbox.checkout(Repo)
 
-    {:ok, _} = Ecto.Adapters.SQL.query(Repo, """
-      CREATE TEMPORARY TABLE "bow-test-users" (
-        id      SERIAL PRIMARY KEY,
-        name    VARCHAR(255),
-        avatar  VARCHAR(255)
+    {:ok, _} =
+      Ecto.Adapters.SQL.query(
+        Repo,
+        """
+          CREATE TEMPORARY TABLE "bow-test-users" (
+            id      SERIAL PRIMARY KEY,
+            name    VARCHAR(255),
+            avatar  VARCHAR(255)
+          )
+          ON COMMIT DROP
+        """,
+        []
       )
-      ON COMMIT DROP
-    """, [])
 
-    Bow.Storage.Local.reset!
+    Bow.Storage.Local.reset!()
     :ok
   end
 
@@ -46,8 +51,8 @@ defmodule Bow.EctoTest do
     use Ecto.Schema
 
     schema "bow-test-users" do
-      field :name,    :string
-      field :avatar,  Avatar.Type
+      field(:name, :string)
+      field(:avatar, Avatar.Type)
     end
 
     def changeset(struct \\ %__MODULE__{}, params) do
@@ -61,7 +66,7 @@ defmodule Bow.EctoTest do
 
   describe "Type internals" do
     test "type/0" do
-      assert Avatar.Type.type == :string
+      assert Avatar.Type.type() == :string
     end
 
     test "cast/1" do
@@ -83,7 +88,7 @@ defmodule Bow.EctoTest do
       use Bow.Ecto
 
       def cast(file) do
-        ts = DateTime.utc_now |> DateTime.to_unix
+        ts = DateTime.utc_now() |> DateTime.to_unix()
         Bow.set(file, :rootname, "avatar_#{ts}")
       end
 
@@ -94,9 +99,9 @@ defmodule Bow.EctoTest do
   describe "Inside schema" do
     test "do not store when not given" do
       assert {:ok, user, results} =
-        User.changeset(%{"name" => "Jon"})
-        |> Repo.insert!
-        |> Bow.Ecto.store()
+               User.changeset(%{"name" => "Jon"})
+               |> Repo.insert!()
+               |> Bow.Ecto.store()
 
       assert user.avatar == nil
       assert results == %{}
@@ -108,13 +113,14 @@ defmodule Bow.EctoTest do
       assert %Bow{name: "bear.png"} = user.changes.avatar
 
       assert {:ok, user, results} =
-        user
-        |> Repo.insert!
-        |> Bow.Ecto.store()
+               user
+               |> Repo.insert!()
+               |> Bow.Ecto.store()
 
       assert results == %{
-        avatar: %{original: :ok, thumb: :ok}
-      }
+               avatar: %{original: :ok, thumb: :ok}
+             }
+
       assert %Bow{name: "bear.png"} = user.avatar
       assert File.exists?("tmp/bow/users/#{user.id}/bear.png")
 
@@ -125,7 +131,7 @@ defmodule Bow.EctoTest do
     test "load avatar" do
       # insert user with avatar
       User.changeset(%{"name" => "Jon", "avatar" => @upload_bear})
-      |> Repo.insert!
+      |> Repo.insert!()
       |> Bow.Ecto.store()
 
       # test loading
@@ -136,7 +142,7 @@ defmodule Bow.EctoTest do
     test "load when empty" do
       # insert user without
       User.changeset(%{"name" => "Jon"})
-      |> Repo.insert!
+      |> Repo.insert!()
       |> Bow.Ecto.store()
 
       # test loading
@@ -148,7 +154,7 @@ defmodule Bow.EctoTest do
       # insert user with avatar
       {:ok, user, _} =
         User.changeset(%{"name" => "Jon", "avatar" => @upload_bear})
-        |> Repo.insert!
+        |> Repo.insert!()
         |> Bow.Ecto.store()
 
       # test load
@@ -160,30 +166,30 @@ defmodule Bow.EctoTest do
       # insert user with avatar
       {:ok, _user, _} =
         User.changeset(%{"name" => "Jon"})
-        |> Repo.insert!
+        |> Repo.insert!()
         |> Bow.Ecto.store()
 
       # test delete
       assert {:ok, _user} =
-        User
-        |> Repo.one()
-        |> Repo.delete!()
-        |> Bow.Ecto.delete()
+               User
+               |> Repo.one()
+               |> Repo.delete!()
+               |> Bow.Ecto.delete()
     end
 
     test "delete avatar" do
       # insert user with avatar
       {:ok, _user, _} =
         User.changeset(%{"name" => "Jon", "avatar" => @upload_bear})
-        |> Repo.insert!
+        |> Repo.insert!()
         |> Bow.Ecto.store()
 
       # test delete
       assert {:ok, user} =
-        User
-        |> Repo.one()
-        |> Repo.delete!()
-        |> Bow.Ecto.delete()
+               User
+               |> Repo.one()
+               |> Repo.delete!()
+               |> Bow.Ecto.delete()
 
       refute File.exists?("tmp/bow/users/#{user.id}/bear.png")
     end
@@ -192,7 +198,7 @@ defmodule Bow.EctoTest do
       # insert user with avatar
       {:ok, user, _} =
         User.changeset(%{"name" => "Jon", "avatar" => @upload_bear})
-        |> Repo.insert!
+        |> Repo.insert!()
         |> Bow.Ecto.store()
 
       # remove file
@@ -200,10 +206,10 @@ defmodule Bow.EctoTest do
 
       # test update
       assert {:ok, user} =
-        User
-        |> Repo.one()
-        |> User.changeset(%{"name" => "Snow"})
-        |> Repo.update()
+               User
+               |> Repo.one()
+               |> User.changeset(%{"name" => "Snow"})
+               |> Repo.update()
 
       assert user.name == "Snow"
 
@@ -215,7 +221,7 @@ defmodule Bow.EctoTest do
       # insert user with avatar
       {:ok, _user, _} =
         User.changeset(%{"name" => "Jon", "avatar" => @upload_bear})
-        |> Repo.insert!
+        |> Repo.insert!()
         |> Bow.Ecto.store()
 
       user = User |> Repo.one()
@@ -224,14 +230,14 @@ defmodule Bow.EctoTest do
 
       {:ok, new_user, _} =
         User.changeset(%{"name" => "Snow", "avatar" => file})
-        |> Repo.insert!
+        |> Repo.insert!()
         |> Bow.Ecto.store()
 
       assert File.exists?("tmp/bow/users/#{user.id}/bear.png")
       assert File.exists?("tmp/bow/users/#{new_user.id}/bear.png")
 
-      assert File.read!("tmp/bow/users/#{user.id}/bear.png")
-          == File.read!("tmp/bow/users/#{new_user.id}/bear.png")
+      assert File.read!("tmp/bow/users/#{user.id}/bear.png") ==
+               File.read!("tmp/bow/users/#{new_user.id}/bear.png")
     end
   end
 
@@ -264,16 +270,18 @@ defmodule Bow.EctoTest do
 
   describe "Remote file URLs" do
     defp client do
-      Tesla.build_adapter fn
+      Tesla.build_adapter(fn
         %{url: "http://example.com/bear.png"} = env ->
-          %{env |
-            status: 200,
-            body: File.read!("test/files/bear.png"),
-            headers: %{"Content-Type" => "image/png"}
+          %{
+            env
+            | status: 200,
+              body: File.read!("test/files/bear.png"),
+              headers: %{"Content-Type" => "image/png"}
           }
+
         env ->
           %{env | status: 404}
-      end
+      end)
     end
 
     test "empty params" do
@@ -305,7 +313,7 @@ defmodule Bow.EctoTest do
     setup do
       {:ok, user, _} =
         User.changeset(%{"name" => "Jon", "avatar" => @upload_bear})
-        |> Repo.insert!
+        |> Repo.insert!()
         |> Bow.Ecto.store()
 
       {:ok, user: user}
@@ -324,7 +332,8 @@ defmodule Bow.EctoTest do
     end
 
     test "version + opts", %{user: user} do
-      assert Bow.Ecto.url(user, :avatar, :thumb, sign: true) == "tmp/bow/users/#{user.id}/thumb_bear.png"
+      assert Bow.Ecto.url(user, :avatar, :thumb, sign: true) ==
+               "tmp/bow/users/#{user.id}/thumb_bear.png"
     end
 
     test "nil field" do
@@ -340,18 +349,19 @@ defmodule Bow.EctoTest do
     test "copy avatar with all versions" do
       {:ok, user, _} =
         User.changeset(%{"name" => "Jon", "avatar" => @upload_bear})
-        |> Repo.insert!
+        |> Repo.insert!()
         |> Bow.Ecto.store()
 
       clone =
         User.changeset(%{"name" => "Bran"})
-        |> Repo.insert!
+        |> Repo.insert!()
 
       assert {:ok, results} = Bow.Ecto.copy(user, :avatar, clone)
+
       assert results == %{
-        original: :ok,
-        thumb: :ok
-      }
+               original: :ok,
+               thumb: :ok
+             }
 
       assert File.exists?("tmp/bow/users/#{user.id}/bear.png")
       assert File.exists?("tmp/bow/users/#{clone.id}/bear.png")
@@ -374,26 +384,26 @@ defmodule Bow.EctoTest do
   describe "combine_results/1" do
     test "with error" do
       assert Bow.Ecto.combine_results(
-        [
-          avatar: {:error, %{original: :ok, thumb: {:error, "oups"}}},
-          photo:  {:ok, %{original: :ok}}
-        ]
-      ) == {:error, %{
-        avatar: %{original: :ok, thumb: {:error, "oups"}},
-        photo:  %{original: :ok}
-      }}
+               avatar: {:error, %{original: :ok, thumb: {:error, "oups"}}},
+               photo: {:ok, %{original: :ok}}
+             ) ==
+               {:error,
+                %{
+                  avatar: %{original: :ok, thumb: {:error, "oups"}},
+                  photo: %{original: :ok}
+                }}
     end
 
     test "all ok" do
       assert Bow.Ecto.combine_results(
-        [
-          avatar: {:ok, %{thumb:    :ok}},
-          photo:  {:ok, %{original: :ok}}
-        ]
-      ) == {:ok, %{
-        avatar: %{thumb: :ok},
-        photo:  %{original: :ok}
-      }}
+               avatar: {:ok, %{thumb: :ok}},
+               photo: {:ok, %{original: :ok}}
+             ) ==
+               {:ok,
+                %{
+                  avatar: %{thumb: :ok},
+                  photo: %{original: :ok}
+                }}
     end
   end
 end

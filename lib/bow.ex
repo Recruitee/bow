@@ -13,29 +13,31 @@ defmodule Bow do
         exec_timeout:   15_000,                 # single command execution timeout
   """
 
-  def storage,          do: Application.get_env(:bow, :storage, Bow.Storage.Local)
-  def store_timeout,    do: Application.get_env(:bow, :store_timeout, 30_000)
-  def version_timeout,  do: Application.get_env(:bow, :version_timeout, 60_000)
+  def storage, do: Application.get_env(:bow, :storage, Bow.Storage.Local)
+  def store_timeout, do: Application.get_env(:bow, :store_timeout, 30_000)
+  def version_timeout, do: Application.get_env(:bow, :version_timeout, 60_000)
 
   @type t :: %__MODULE__{
-            name:     String.t, # "cat.jpg",  "README"
-            rootname: String.t, # "cat",      "README"
-            ext:      String.t, # ".jpg",     ""
-            path:     String.t | nil,
-            scope:    any,
-            uploader: atom
-  }
+          # "cat.jpg",  "README"
+          name: String.t(),
+          # "cat",      "README"
+          rootname: String.t(),
+          # ".jpg",     ""
+          ext: String.t(),
+          path: String.t() | nil,
+          scope: any,
+          uploader: atom
+        }
 
   @typep opts :: keyword
 
   @enforce_keys [:name, :rootname, :ext]
-  defstruct name:     "",
+  defstruct name: "",
             rootname: "",
-            ext:      nil,
-            path:     nil,
-            scope:    nil,
+            ext: nil,
+            path: nil,
+            scope: nil,
             uploader: nil
-
 
   defmodule Error do
     defexception message: ""
@@ -51,7 +53,6 @@ defmodule Bow do
 
     make(uploader, file, file, versions, opts) |> combine_results
   end
-
 
   @doc """
   Load given file
@@ -69,6 +70,7 @@ defmodule Bow do
   @spec delete(t, opts) :: :ok
   def delete(file, opts \\ []) do
     uploader = file.uploader
+
     for version <- uploader.versions(file) do
       name = uploader.filename(file, version)
       delete_file(uploader, set(file, :name, name), opts)
@@ -111,11 +113,12 @@ defmodule Bow do
     versions
     |> Enum.map(&Task.async(fn -> make(up, f0, fx, &1, opts) end))
     |> Enum.map(&Task.await(&1, version_timeout()))
-    |> List.flatten
+    |> List.flatten()
   end
 
   defp make(up, f0, fx, version, opts) do
-    fy = fx
+    fy =
+      fx
       |> set(:name, up.filename(f0, version))
       |> set(:path, nil)
 
@@ -181,6 +184,7 @@ defmodule Bow do
   def url(file, opts) when is_list(opts), do: url(file, :original, opts)
   def url(file, version), do: url(file, version, [])
   def url(nil, _version, _opts), do: nil
+
   def url(file, version, opts) do
     storage().url(
       file.uploader.store_dir(file),
@@ -190,18 +194,25 @@ defmodule Bow do
   end
 
   def new(args) do
-    {name, path} = case {args[:name], args[:path]} do
-      {nil, nil}    -> raise Error, message: "Missing :name or :path attributes when creating new Bow file"
-      {nil, path}   -> {basename(path), path}
-      {name, path}  -> {name, path}
-    end
+    {name, path} =
+      case {args[:name], args[:path]} do
+        {nil, nil} ->
+          raise Error, message: "Missing :name or :path attributes when creating new Bow file"
 
-    args = Keyword.merge(args, [
-      path:     path,
-      name:     name,
-      rootname: rootname(name),
-      ext:      extname(name)
-    ])
+        {nil, path} ->
+          {basename(path), path}
+
+        {name, path} ->
+          {name, path}
+      end
+
+    args =
+      Keyword.merge(args,
+        path: path,
+        name: name,
+        rootname: rootname(name),
+        ext: extname(name)
+      )
 
     struct!(__MODULE__, args)
   end
@@ -210,21 +221,20 @@ defmodule Bow do
   defp rootname(name), do: name |> Path.rootname()
   defp extname(name), do: name |> Path.extname() |> String.downcase()
 
-  def set(file, :name, name), do:
-    %{file | name: name, rootname: rootname(name), ext: extname(name)}
-  def set(file, :rootname, rootname), do:
-    %{file | name: rootname <> file.ext, rootname: rootname}
-  def set(file, :ext, ext), do:
-    %{file | name: file.rootname <> ext, ext: ext}
-  def set(file, key, value), do:
-    struct(file, [{key, value}])
+  def set(file, :name, name),
+    do: %{file | name: name, rootname: rootname(name), ext: extname(name)}
+
+  def set(file, :rootname, rootname), do: %{file | name: rootname <> file.ext, rootname: rootname}
+  def set(file, :ext, ext), do: %{file | name: file.rootname <> ext, ext: ext}
+  def set(file, key, value), do: struct(file, [{key, value}])
 
   def combine_results(results) do
-    Enum.reduce results, {:ok, %{}}, fn
+    Enum.reduce(results, {:ok, %{}}, fn
       {key, {:error, reason}}, {_, map} ->
         {:error, Map.put(map, key, {:error, reason})}
+
       {key, value}, {ok, map} ->
         {ok, Map.put(map, key, value)}
-    end
+    end)
   end
 end
