@@ -270,7 +270,7 @@ defmodule Bow.EctoTest do
 
   describe "Remote file URLs" do
     defp client do
-      Tesla.build_adapter(fn
+      Tesla.client([], fn
         %{url: "http://example.com/bear.png"} = env ->
           %{
             env

@@ -7,7 +7,7 @@ defmodule Bow.DownloadTest do
 
   setup do
     client =
-      Tesla.build_adapter(fn env ->
+      Tesla.client([], fn env ->
         case env do
           %{url: "http://example.com/cat.png"} ->
             %{
