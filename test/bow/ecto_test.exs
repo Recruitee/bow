@@ -272,15 +272,16 @@ defmodule Bow.EctoTest do
     defp client do
       Tesla.client([], fn
         %{url: "http://example.com/bear.png"} = env ->
-          %{
-            env
-            | status: 200,
-              body: File.read!("test/files/bear.png"),
-              headers: %{"Content-Type" => "image/png"}
-          }
+          {:ok,
+           %{
+             env
+             | status: 200,
+               body: File.read!("test/files/bear.png"),
+               headers: [{"Content-Type", "image/png"}]
+           }}
 
         env ->
-          %{env | status: 404}
+          {:ok, %{env | status: 404}}
       end)
     end
 

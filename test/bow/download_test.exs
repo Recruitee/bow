@@ -7,46 +7,49 @@ defmodule Bow.DownloadTest do
 
   setup do
     client =
-      Tesla.client([], fn env ->
+      Tesla.client([Tesla.Middleware.FollowRedirects], fn env ->
         case env do
           %{url: "http://example.com/cat.png"} ->
-            %{
-              env
-              | status: 200,
-                body: File.read!(@file_cat),
-                headers: %{"Content-Type" => "image/png"}
-            }
+            {:ok,
+             %{
+               env
+               | status: 200,
+                 body: File.read!(@file_cat),
+                 headers: [{"content-type", "image/png"}]
+             }}
 
           %{url: "http://example.com/kitten.png"} ->
-            %{env | status: 301, headers: %{"Location" => "http://example.com/cat.png"}}
+            {:ok, %{env | status: 301, headers: [{"location", "http://example.com/cat.png"}]}}
 
           %{url: "http://example.com/loop.png"} ->
-            %{env | status: 301, headers: %{"Location" => "http://example.com/loop.png"}}
+            {:ok, %{env | status: 301, headers: [{"location", "http://example.com/loop.png"}]}}
 
           %{url: "http://example.com/notype.png"} ->
-            %{env | status: 200, body: File.read!(@file_cat)}
+            {:ok, %{env | status: 200, body: File.read!(@file_cat)}}
 
           %{url: "http://example.com/noext"} ->
-            %{env | status: 200, body: File.read!(@file_cat)}
+            {:ok, %{env | status: 200, body: File.read!(@file_cat)}}
 
           %{url: "http://example.com/u" <> _} ->
-            %{
-              env
-              | status: 200,
-                body: File.read!(@file_cat),
-                headers: %{"Content-Type" => "image/png"}
-            }
+            {:ok,
+             %{
+               env
+               | status: 200,
+                 body: File.read!(@file_cat),
+                 headers: [{"content-type", "image/png"}]
+             }}
 
           %{url: "http://example.com/dog.jpg"} ->
-            %{
-              env
-              | status: 200,
-                body: File.read!(@file_cat),
-                headers: %{"Content-Type" => "example/dog/nope"}
-            }
+            {:ok,
+             %{
+               env
+               | status: 200,
+                 body: File.read!(@file_cat),
+                 headers: [{"content-type", "example/dog/nope"}]
+             }}
 
           _ ->
-            %{env | status: 404, body: "NotFound"}
+            {:ok, %{env | status: 404, body: "NotFound"}}
         end
       end)
 
