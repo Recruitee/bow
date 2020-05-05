@@ -9,7 +9,7 @@ defmodule Bow.Download do
   @spec download(client :: Tesla.Client.t() | nil, url :: String.t()) ::
           {:ok, Bow.t()} | {:error, any}
   def download(client \\ %Tesla.Client{}, url) do
-    case get(client, encode(url)) do
+    case get!(client, encode(url)) do
       %{status: 200, url: url, body: body, headers: headers} ->
         base = url |> URI.parse() |> Map.get(:path) |> Path.basename()
 
