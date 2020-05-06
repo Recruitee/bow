@@ -99,6 +99,14 @@ defmodule Bow.Ecto do
         def dump(%{name: name}) do
           {:ok, name}
         end
+
+        def embed_as(_) do
+          :self
+        end
+
+        def equal?(left, right) do
+          left == right
+        end
       end
 
       @behaviour Bow.Ecto
