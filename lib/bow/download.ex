@@ -9,20 +9,20 @@ defmodule Bow.Download do
   @spec download(client :: Tesla.Client.t() | nil, url :: String.t()) ::
           {:ok, Bow.t()} | {:error, any}
   def download(client \\ %Tesla.Client{}, url) do
-    case get(client, encode(url)) do
-      %{status: 200, url: url, body: body, headers: headers} ->
+    case get!(client, encode(url)) do
+      %{status: 200, url: url, body: body} = env ->
         base = url |> URI.parse() |> Map.get(:path) |> Path.basename()
 
         name =
-          case Map.fetch(headers, "content-type") do
-            {:ok, content_type} ->
+          case Tesla.get_header(env, "content-type") do
+            nil ->
+              base
+
+            content_type ->
               case MIME.extensions(content_type) do
                 [ext | _] -> Path.rootname(base) <> "." <> ext
                 _ -> base
               end
-
-            :error ->
-              base
           end
 
         path = Plug.Upload.random_file!("bow-download")
