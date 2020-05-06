@@ -207,7 +207,7 @@ defmodule Bow.Ecto do
       |> Repo.update!()
       |> Bow.Ecto.store!()
   """
-  @spec store!(Ecto.Schema.t()) :: Ecto.Chema.t() | no_return
+  @spec store!(Ecto.Schema.t()) :: Ecto.Schema.t() | no_return
   def store!({:error, _} = err), do: err
   def store!({:ok, record}), do: {:ok, store!(record)}
 

@@ -12,7 +12,8 @@ defmodule Bow.Mixfile do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      test_coverage: [tool: Coverex.Task]
+      test_coverage: [tool: Coverex.Task],
+      dialyzer: dialyzer()
     ]
   end
 
@@ -61,7 +62,7 @@ defmodule Bow.Mixfile do
       {:coverex, "~> 1.4.10", only: :test},
       {:ex_doc, "~> 0.16.1", only: :dev},
       {:mix_test_watch, "~> 0.5.0", only: :dev},
-      {:dialyxir, "~> 0.5.1", only: :dev}
+      {:dialyxir, "~> 1.0", only: :dev}
     ]
   end
 
@@ -69,6 +70,12 @@ defmodule Bow.Mixfile do
     [
       "ecto.setup": ["ecto.create --quiet", "ecto.migrate --quiet"],
       "ecto.reset": ["ecto.drop --quiet", "ecto.setup"]
+    ]
+  end
+
+  defp dialyzer do
+    [
+      plt_add_apps: [:ecto, :ex_aws, :ex_aws_s3, :erlexec]
     ]
   end
 end
