@@ -14,7 +14,11 @@ defmodule Bow.Mixfile do
       deps: deps(),
       test_coverage: [tool: Coverex.Task],
       package: package(),
-      dialyzer: dialyzer()
+      dialyzer: dialyzer(),
+
+      # Docs
+      name: "Bow",
+      docs: docs()
     ]
   end
 
@@ -61,7 +65,7 @@ defmodule Bow.Mixfile do
       # testing & docs
       {:postgrex, ">= 0.0.0", only: :test},
       {:coverex, "~> 1.4.10", only: :test},
-      {:ex_doc, "~> 0.16.1", only: :dev},
+      {:ex_doc, "~> 0.21", only: :dev},
       {:mix_test_watch, "~> 0.5.0", only: :dev},
       {:dialyxir, "~> 1.0", only: :dev}
     ]
@@ -82,6 +86,15 @@ defmodule Bow.Mixfile do
       links: %{
         "Github" => "https://github.com/recruitee/bow"
       }
+    ]
+  end
+
+  defp docs() do
+    [
+      main: "readme",
+      extras: ["README.md"],
+      source_url: "https://github.com/recruitee/bow",
+      source_ref: @version
     ]
   end
 
