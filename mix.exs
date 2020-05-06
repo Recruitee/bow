@@ -13,6 +13,7 @@ defmodule Bow.Mixfile do
       aliases: aliases(),
       deps: deps(),
       test_coverage: [tool: Coverex.Task],
+      package: package(),
       dialyzer: dialyzer()
     ]
   end
@@ -70,6 +71,17 @@ defmodule Bow.Mixfile do
     [
       "ecto.setup": ["ecto.create --quiet", "ecto.migrate --quiet"],
       "ecto.reset": ["ecto.drop --quiet", "ecto.setup"]
+    ]
+  end
+
+  defp package() do
+    [
+      description: "File uploads for Elixir.",
+      maintainers: [],
+      licenses: ["MIT"],
+      links: %{
+        "Github" => "https://github.com/recruitee/bow"
+      }
     ]
   end
 
