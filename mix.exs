@@ -1,10 +1,12 @@
 defmodule Bow.Mixfile do
   use Mix.Project
 
+  @version "0.2.1"
+
   def project do
     [
       app: :bow,
-      version: "0.2.1",
+      version: @version,
       elixir: "~> 1.3",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
