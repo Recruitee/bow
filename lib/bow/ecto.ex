@@ -385,6 +385,7 @@ defmodule Bow.Ecto do
 
   # Similar to Bow.combine_results but flatten
   # files results for easier pattern matching
+  @doc false
   def combine_results(results) do
     Enum.reduce(results, {:ok, %{}}, fn
       {key, {:error, res}}, {_, map} ->

@@ -228,6 +228,7 @@ defmodule Bow do
   def set(file, :ext, ext), do: %{file | name: file.rootname <> ext, ext: ext}
   def set(file, key, value), do: struct(file, [{key, value}])
 
+  @doc false
   def combine_results(results) do
     Enum.reduce(results, {:ok, %{}}, fn
       {key, {:error, reason}}, {_, map} ->
