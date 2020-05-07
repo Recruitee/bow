@@ -105,7 +105,7 @@ defmodule Bow do
       end)
       |> combine_results()
     else
-      {:error, :uploader_missmatch}
+      {:error, :uploader_mismatch}
     end
   end
 
