@@ -1,5 +1,5 @@
 defmodule Bow.Download do
-  use Tesla
+  use Tesla, only: [:get]
 
   plug(Tesla.Middleware.FollowRedirects)
 
