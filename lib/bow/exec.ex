@@ -46,7 +46,7 @@ defmodule Bow.Exec do
         :output -> target_path
         arg -> arg
       end)
-      |> Enum.map(&to_char_list/1)
+      |> Enum.map(&to_charlist/1)
 
     trapping(fn ->
       case :exec.run_link(cmd, stdout: self(), stderr: self()) do
