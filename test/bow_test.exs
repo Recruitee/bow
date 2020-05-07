@@ -503,7 +503,15 @@ defmodule BowTest do
       end
     end
 
-    test "#store" do
+    defmodule CopyWrongUploader do
+      use Bow.Uploader
+
+      def store_dir(_) do
+        "copywrong"
+      end
+    end
+
+    test "#copy" do
       file = CopyUploader.new(path: @file_cat)
       assert {:ok, _results} = Bow.store(file)
 
@@ -525,6 +533,13 @@ defmodule BowTest do
 
       assert File.read!("tmp/bow/copy/thumb_cat.jpg") ==
                File.read!("tmp/bow/copy/thumb_kitten.jpg")
+    end
+
+    test "error on uploader mismatch" do
+      file = CopyUploader.new(path: @file_cat)
+      copy = CopyWrongUploader.new(path: @file_cat, rootname: "kitten")
+
+      assert {:error, :uploader_mismatch} = Bow.copy(file, copy)
     end
   end
 end
