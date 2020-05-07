@@ -6,7 +6,7 @@ defmodule Bow.Download do
   @doc """
   Download file from given URL
   """
-  @spec download(client :: Tesla.Client.t() | nil, url :: String.t()) ::
+  @spec download(client :: Tesla.Client.t(), url :: String.t()) ::
           {:ok, Bow.t()} | {:error, any}
   def download(client \\ %Tesla.Client{}, url) do
     case get!(client, encode(url)) do

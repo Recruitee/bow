@@ -2,7 +2,6 @@ defmodule Bow do
   @moduledoc """
   Bow - the file uploader
 
-
   ## Global Configuration
 
       config :bow,
@@ -46,7 +45,7 @@ defmodule Bow do
   @doc """
   Process & store given file with its uploader
   """
-  @spec store(t, opts) :: {:ok, t} | {:error, any}
+  @spec store(t, opts) :: {:ok, map} | {:error, map}
   def store(file, opts \\ []) do
     uploader = file.uploader
     versions = uploader.versions(file)
@@ -82,7 +81,7 @@ defmodule Bow do
   @doc """
   Regenerate file using different uploader
   """
-  @spec regenerate(t) :: {:ok, t} | {:error, any}
+  @spec regenerate(t) :: {:ok, map} | {:error, any}
   def regenerate(file) do
     with {:ok, file} <- load(file), do: store(file)
   end
@@ -90,7 +89,7 @@ defmodule Bow do
   @doc """
   Copy file
   """
-  @spec copy(src :: t, dst :: t, opts) :: {:ok, t} | {:error, any}
+  @spec copy(src :: t, dst :: t, opts) :: {:ok, map} | {:error, any}
   def copy(src, dst, opts \\ []) do
     if src.uploader == dst.uploader do
       uploader = src.uploader
@@ -180,9 +179,15 @@ defmodule Bow do
     )
   end
 
+  @spec url(t | nil) :: String.t() | nil
+
   def url(file), do: url(file, [])
+
+  @spec url(t | nil, atom | list) :: String.t() | nil
   def url(file, opts) when is_list(opts), do: url(file, :original, opts)
   def url(file, version), do: url(file, version, [])
+
+  @spec url(t | nil, atom, list) :: String.t() | nil
   def url(nil, _version, _opts), do: nil
 
   def url(file, version, opts) do
@@ -193,6 +198,7 @@ defmodule Bow do
     )
   end
 
+  @spec new(keyword) :: t
   def new(args) do
     {name, path} =
       case {args[:name], args[:path]} do
@@ -221,6 +227,7 @@ defmodule Bow do
   defp rootname(name), do: name |> Path.rootname()
   defp extname(name), do: name |> Path.extname() |> String.downcase()
 
+  @spec set(t, atom, any) :: t
   def set(file, :name, name),
     do: %{file | name: name, rootname: rootname(name), ext: extname(name)}
 
@@ -229,6 +236,7 @@ defmodule Bow do
   def set(file, key, value), do: struct(file, [{key, value}])
 
   @doc false
+  @spec combine_results(list) :: {:ok, map} | {:error, map}
   def combine_results(results) do
     Enum.reduce(results, {:ok, %{}}, fn
       {key, {:error, reason}}, {_, map} ->

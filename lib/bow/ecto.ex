@@ -120,6 +120,8 @@ defmodule Bow.Ecto do
     defexception message: nil, reason: nil
   end
 
+  @typep model :: Ecto.Schema.t() | Ecto.Changeset.t()
+
   @doc """
   Validate changeset using uploader's `validate/1` function
 
@@ -182,7 +184,7 @@ defmodule Bow.Ecto do
 
   There is also `store!/1` function that will raise error instead of returning `:ok/:error` tuple.
   """
-  @spec store(Ecto.Schema.t()) :: {:ok, Ecto.Schema.t(), list} | {:error, Ecto.Schema.t(), any}
+  @spec store(model) :: {:ok, model, map} | {:error, model, map}
   def store(record) do
     case do_store(record) do
       {:ok, results} -> {:ok, record, results}
@@ -207,7 +209,7 @@ defmodule Bow.Ecto do
       |> Repo.update!()
       |> Bow.Ecto.store!()
   """
-  @spec store!(Ecto.Schema.t()) :: Ecto.Schema.t() | no_return
+  @spec store!(model | {:ok, model} | {:error, any}) :: {:ok, model} | {:error, any} | model
   def store!({:error, _} = err), do: err
   def store!({:ok, record}), do: {:ok, store!(record)}
 
@@ -247,7 +249,7 @@ defmodule Bow.Ecto do
       |> Bow.Ecto.delete()
 
   """
-  @spec delete(Ecto.Schema.t()) :: {:ok, Ecto.Schema.t()} | {:error, any}
+  @spec delete(model) :: {:ok, model} | {:error, any}
   def delete(record) do
     with {:ok, _} <- do_delete(record) do
       {:ok, record}
@@ -267,8 +269,7 @@ defmodule Bow.Ecto do
       Ecto.Bow.copy(user1, :avatar, user2)
   """
   @spec copy(src :: Ecto.Schema.t(), field :: atom, dst :: Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t()}
-          | {:error, any}
+          {:ok, map} | {:error, any}
   def copy(src, src_field, dst) do
     case Map.fetch!(src, src_field) do
       nil ->
@@ -284,10 +285,14 @@ defmodule Bow.Ecto do
   @doc """
   Generate URL for record & field
   """
+  @spec url(Ecto.Schema.t(), atom) :: String.t() | nil
   def url(record, field), do: url(record, field, [])
+
+  @spec url(Ecto.Schema.t(), atom, atom | list) :: String.t() | nil
   def url(record, field, opts) when is_list(opts), do: url(record, field, :original, opts)
   def url(record, field, version), do: url(record, field, version, [])
 
+  @spec url(Ecto.Schema.t(), atom, atom, list) :: String.t() | nil
   def url(record, field, version, opts) do
     record
     |> Map.fetch!(field)
@@ -303,10 +308,13 @@ defmodule Bow.Ecto do
       |> cast(params, [:name, :avatar])
       |> Bow.Ecto.cast_uploads(params, [:avatar])
   """
+  @spec cast_uploads(any, map, list, Tesla.Client.t()) ::
+          Ecto.Changeset.t()
   def cast_uploads(changeset, params, fields, client \\ %Tesla.Client{}) do
     Ecto.Changeset.cast(changeset, download_params(params, fields, client), fields)
   end
 
+  @spec download_params(map, list, Tesla.Client.t()) :: map
   def download_params(params, fields, client \\ %Tesla.Client{}) do
     Enum.reduce(fields, params, fn field, params ->
       field = to_string(field)
@@ -386,6 +394,7 @@ defmodule Bow.Ecto do
   # Similar to Bow.combine_results but flatten
   # files results for easier pattern matching
   @doc false
+  @spec combine_results(list) :: {:ok, map} | {:error, map}
   def combine_results(results) do
     Enum.reduce(results, {:ok, %{}}, fn
       {key, {:error, res}}, {_, map} ->
