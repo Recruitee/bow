@@ -77,7 +77,8 @@ defmodule Bow.Storage.S3 do
     |> ExAws.request()
     |> case do
       {:ok, :done} -> {:ok, path}
-      error -> error
+      {:error, _} = error -> error
+      error -> {:error, error}
     end
   rescue
     ex in ExAws.Error -> {:error, ex}
