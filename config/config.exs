@@ -2,8 +2,8 @@ use Mix.Config
 
 if Mix.env() == :test do
   config :bow, Bow.Repo,
-    username: "teamon",
-    password: "",
+    username: System.get_env("TEST_DB_USERNAME") || "development",
+    password: System.get_env("TEST_DB_PASSWORD") || "",
     database: "bow_ecto_test",
     hostname: "localhost",
     pool: Ecto.Adapters.SQL.Sandbox
