@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3.2
+
+* Typespecs improvements
+
 ## v0.3.1
 
 * Typespecs improvements
