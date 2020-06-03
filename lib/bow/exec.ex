@@ -8,6 +8,8 @@ defmodule Bow.Exec do
   It is also possible to provide custom command timeout. See `exec/4` to see all available options.
   """
 
+  @type command :: [String.t() | {:input, integer} | :input | :output]
+
   defp default_timeout, do: Application.get_env(:bow, :exec_timeout, 15_000)
 
   @doc """
@@ -31,7 +33,7 @@ defmodule Bow.Exec do
       end
 
   """
-  @spec exec(Bow.t(), Bow.t(), [String.t()], keyword) :: {:ok, Bow.t()} | {:error, any}
+  @spec exec(Bow.t(), Bow.t(), command, keyword) :: {:ok, Bow.t()} | {:error, any}
   def exec(source, target, command, opts \\ []) do
     timeout = opts[:timeout] || default_timeout()
 
