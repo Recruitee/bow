@@ -2,6 +2,8 @@
 
 File uploads for Elixir
 
+Forked from https://github.com/Recruitee/bow.  Appreciate the effort that you had put into this!
+
 ## Features
 
 - Generate multiple dependent versions of a file
