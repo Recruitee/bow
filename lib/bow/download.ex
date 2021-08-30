@@ -20,7 +20,7 @@ defmodule Bow.Download do
 
             content_type ->
               case MIME.extensions(content_type) do
-                [ext | _] -> Path.rootname(base) <> "." <> ext
+                [ext | _] -> rootname(base) <> "." <> ext
                 _ -> base
               end
           end
@@ -41,6 +41,22 @@ defmodule Bow.Download do
   rescue
     ex in Tesla.Error ->
       {:error, ex}
+  end
+
+  # If path name is malformed, for example looks like this: ".some-data",
+  # we won't be able to extract it and we will treat the name
+  # as file extension instead.
+  #
+  # To handle all kind of problems we simply fallback to auto-generated
+  # name if we cannot read it properly.
+  defp rootname(base) do
+    case Path.rootname(base) do
+      "" ->
+        Ecto.UUID.generate()
+
+      name ->
+        name
+    end
   end
 
   defp encode(url), do: url |> URI.encode() |> String.replace(~r/%25([0-9a-f]{2})/i, "%\\g{1}")
