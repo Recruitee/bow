@@ -48,6 +48,15 @@ defmodule Bow.DownloadTest do
                  headers: [{"content-type", "example/dog/nope"}]
              }}
 
+            %{url: "http://example.com/.weird-path"} ->
+              {:ok,
+               %{
+                 env
+                 | status: 200,
+                   body: File.read!(@file_cat),
+                   headers: [{"content-type", "image/png"}]
+               }}
+
           _ ->
             {:ok, %{env | status: 404, body: "NotFound"}}
         end
@@ -91,6 +100,13 @@ defmodule Bow.DownloadTest do
   test "file with invalid content type", %{client: client} do
     assert {:ok, file} = download(client, "http://example.com/dog.jpg")
     assert file.name == "dog.jpg"
+    assert file.path != nil
+    assert File.read!(file.path) == File.read!(@file_cat)
+  end
+
+  test "url with path starting with dot", %{client: client} do
+    assert {:ok, file} = download(client, "http://example.com/.weird-path")
+    assert Regex.match?(~r/.+\.png/, file.name)
     assert file.path != nil
     assert File.read!(file.path) == File.read!(@file_cat)
   end
