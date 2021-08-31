@@ -1,5 +1,9 @@
 # Changelog
 
+# v0.3.3
+
+* Fix file extension detection
+
 ## v0.3.2
 
 * Typespecs improvements
