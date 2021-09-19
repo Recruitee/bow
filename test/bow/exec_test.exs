@@ -30,7 +30,7 @@ defmodule Bow.ExecTest do
     assert reason[:exit_code] != 0
   end
 
-  test "timout", %{source: source, target: target} do
+  test "timeout", %{source: source, target: target} do
     assert {:error, reason} =
              exec(source, target, ["test/scripts/sleep.sh", :input, :output], timeout: 500)
 

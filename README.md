@@ -1,6 +1,12 @@
 # Bow
 
-File uploads for Elixir
+[![Module Version](https://img.shields.io/hexpm/v/bow.svg)](https://hex.pm/packages/bow)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/bow/)
+[![Total Download](https://img.shields.io/hexpm/dt/bow.svg)](https://hex.pm/packages/bow)
+[![License](https://img.shields.io/hexpm/l/bow.svg)](https://github.com/recruitee/bow/blob/master/LICENSE.md)
+[![Last Updated](https://img.shields.io/github/last-commit/recruitee/bow.svg)](https://github.com/recruitee/bow/commits/master)
+
+File uploads for Elixir.
 
 ## Features
 
@@ -53,7 +59,7 @@ defmodule AttachmentUploader do
   end
 
 
-  # keep the origianal file name
+  # keep the original file name
   def filename(file, :original), do: file.name
 
   # prepend "thumb_" for thumbnail
@@ -227,3 +233,10 @@ fakes3 -r tmp/s3 -p 4567
 # run tests
 mix test --only s3
 ```
+
+## Copyright and License
+
+Copyright (c) 2016 Tymon Tobolski, Recruitee
+
+This work is free. You can redistribute it and/or modify it under the
+terms of the MIT License. See the [LICENSE.md](./LICENSE.md) file for more details.

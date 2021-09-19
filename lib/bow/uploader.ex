@@ -28,7 +28,7 @@ defmodule Bow.Uploader do
         end
 
 
-        # keep the origianal file name
+        # keep the original file name
         def filename(file, :original), do: file.name
 
         # prepend "thumb_" for thumbnail
@@ -153,7 +153,7 @@ defmodule Bow.Uploader do
   Example
 
       defmodule MyImageUploader do
-        # keep the origianal file name
+        # keep the original file name
         def filename(file, :original),  do: file.name
 
         # for :pdf version prefix with _pdf and add .pdf extension
@@ -179,7 +179,7 @@ defmodule Bow.Uploader do
         # generate image thumbnail
         def transform(source, target, :thumb) do
           # Bow.Exec allows executing any system command replacing ${input} and ${output}
-          # with correct paths. It can also take :timeout option to prevent resource consumtion.
+          # with correct paths. It can also take :timeout option to prevent resource consumption.
           # Refer to Bow.Exec documentation for more details
           Bow.Exec.exec source, target,
             "convert ${input} -strip -gravity Center -resize 250x175^ -extent 250x175 ${output}"
