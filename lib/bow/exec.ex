@@ -78,12 +78,12 @@ defmodule Bow.Exec do
     result
   end
 
-  defp wait_for_exit(pid, ospid, timout) do
+  defp wait_for_exit(pid, ospid, timeout) do
     receive do
       {:EXIT, ^pid, :normal} -> {:ok, receive_output(ospid)}
       {:EXIT, ^pid, {:exit_status, code}} -> {:error, code, receive_output(ospid)}
     after
-      timout ->
+      timeout ->
         :exec.stop_and_wait(pid, 2000)
         {:error, :timeout, receive_output(ospid)}
     end
