@@ -179,14 +179,6 @@ defmodule Bow do
     )
   end
 
-  defp assets_host(file) do
-    Kernel.function_exported?(file.uploader, :assets_host, 0)
-    |> case do
-      true -> file.uploader.assets_host()
-      false -> nil
-    end
-  end
-
   @spec url(t | nil) :: String.t() | nil
 
   def url(file), do: url(file, [])
@@ -199,7 +191,7 @@ defmodule Bow do
   def url(nil, _version, _opts), do: nil
 
   def url(file, version, opts) do
-    assets_host = assets_host(file)
+    assets_host = file.uploader.assets_host()
 
     opts = opts |> Keyword.put(:assets_host, assets_host)
 
