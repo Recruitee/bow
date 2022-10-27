@@ -119,7 +119,7 @@ defmodule Bow.Storage.S3 do
 
     case Keyword.pop(opts, :signed) do
       {true, opts} -> signed_url(key, opts)
-      _ -> unsigned_url(key)
+      _ -> unsigned_url(key, opts)
     end
   end
 
@@ -133,7 +133,12 @@ defmodule Bow.Storage.S3 do
     url
   end
 
-  defp unsigned_url(key) do
-    Path.join(assets_host(), key)
+  defp unsigned_url(key, opts) do
+    Keyword.get(opts, :assets_host)
+    |> case do
+      nil -> assets_host()
+      host -> host
+    end
+    |> Path.join(key)
   end
 end

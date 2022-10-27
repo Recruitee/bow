@@ -57,6 +57,11 @@ defmodule Bow.Storage.S3Test do
     assert url == "http://test-bucket.localhost/mydir/cat.jpg"
   end
 
+  test "unsigned url with custom assets host" do
+    url = S3.url("mydir", "cat.jpg", assets_host: "https://bow.dev/")
+    assert url == "https://bow.dev/mydir/cat.jpg"
+  end
+
   test "signed url" do
     url = S3.url("mydir", "cat.jpg", signed: true)
     assert "http://test-bucket.localhost:4567/mydir/cat.jpg" <> _ = url
