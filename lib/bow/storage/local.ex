@@ -43,8 +43,15 @@ defmodule Bow.Storage.Local do
   end
 
   @impl true
-  def url(dir, name, _opts) do
-    Path.join([prefix(), dir, name])
+  def url(dir, name, opts) do
+    path = [prefix(), dir, name]
+
+    Keyword.get(opts, :assets_host)
+    |> case do
+      nil -> path
+      host -> [host | path]
+    end
+    |> Path.join()
   end
 
   def reset! do

@@ -218,6 +218,23 @@ defmodule Bow.Uploader do
   """
   @callback validate(file :: Bow.t()) :: :ok | {:error, reason :: any}
 
+  @doc """
+  Defines custom assets host.
+
+  Default implementation returns empty value (`nil`)
+
+  Example usage with `Bow.Storage.S3`
+
+      defmodule MyUploader do
+        # ...
+        def assets_host() do
+          "https://assets.example.com/"
+        end
+      end
+
+  """
+  @callback assets_host() :: binary()
+
   defmacro __using__(_) do
     quote do
       @behaviour Bow.Uploader
@@ -249,6 +266,10 @@ defmodule Bow.Uploader do
       # by default every file is valid
       def validate(file), do: :ok
       defoverridable validate: 1
+
+      # by default assets host is provided by uploader default
+      def assets_host(), do: nil
+      defoverridable assets_host: 0
     end
   end
 

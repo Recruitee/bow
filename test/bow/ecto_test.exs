@@ -20,7 +20,8 @@ defmodule Bow.EctoTest do
           CREATE TEMPORARY TABLE "bow-test-users" (
             id      SERIAL PRIMARY KEY,
             name    VARCHAR(255),
-            avatar  VARCHAR(255)
+            avatar  VARCHAR(255),
+            cover_image  VARCHAR(255)
           )
           ON COMMIT DROP
         """,
@@ -47,17 +48,38 @@ defmodule Bow.EctoTest do
     end
   end
 
+  defmodule CoverImage do
+    use Bow.Uploader
+    use Bow.Ecto
+
+    def versions(_file) do
+      [:original, :thumb]
+    end
+
+    def validate(%{ext: ".png"}), do: :ok
+    def validate(_), do: {:error, "Only PNG allowed"}
+
+    def store_dir(file) do
+      "users/#{file.scope.id}"
+    end
+
+    def assets_host do
+      "https://bow.dev/"
+    end
+  end
+
   defmodule User do
     use Ecto.Schema
 
     schema "bow-test-users" do
       field(:name, :string)
       field(:avatar, Avatar.Type)
+      field(:cover_image, CoverImage.Type)
     end
 
     def changeset(struct \\ %__MODULE__{}, params) do
       struct
-      |> Ecto.Changeset.cast(params, [:name, :avatar])
+      |> Ecto.Changeset.cast(params, [:name, :avatar, :cover_image])
     end
   end
 
@@ -126,6 +148,30 @@ defmodule Bow.EctoTest do
 
       assert Bow.Ecto.url(user, :avatar) == "tmp/bow/users/#{user.id}/bear.png"
       assert Bow.Ecto.url(user, :avatar, :thumb) == "tmp/bow/users/#{user.id}/thumb_bear.png"
+    end
+
+    test "cast when insert/update custom assets host" do
+      user = User.changeset(%{"name" => "Jon", "cover_image" => @upload_bear})
+
+      assert %Bow{name: "bear.png"} = user.changes.cover_image
+
+      assert {:ok, user, results} =
+               user
+               |> Repo.insert!()
+               |> Bow.Ecto.store()
+
+      assert results == %{
+               cover_image: %{original: :ok, thumb: :ok}
+             }
+
+      assert %Bow{name: "bear.png"} = user.cover_image
+      assert File.exists?("tmp/bow/users/#{user.id}/bear.png")
+
+      assert Bow.Ecto.url(user, :cover_image) ==
+               "https://bow.dev/" <> "tmp/bow/users/#{user.id}/bear.png"
+
+      assert Bow.Ecto.url(user, :cover_image, :thumb) ==
+               "https://bow.dev/" <> "tmp/bow/users/#{user.id}/thumb_bear.png"
     end
 
     test "load avatar" do

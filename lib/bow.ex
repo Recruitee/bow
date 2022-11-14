@@ -191,6 +191,10 @@ defmodule Bow do
   def url(nil, _version, _opts), do: nil
 
   def url(file, version, opts) do
+    assets_host = file.uploader.assets_host()
+
+    opts = opts |> Keyword.put(:assets_host, assets_host)
+
     storage().url(
       file.uploader.store_dir(file),
       file.uploader.filename(file, version),

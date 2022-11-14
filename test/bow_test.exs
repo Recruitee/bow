@@ -542,4 +542,24 @@ defmodule BowTest do
       assert {:error, :uploader_mismatch} = Bow.copy(file, copy)
     end
   end
+
+  describe "Custom assets host uploader" do
+    defmodule AssetsHostUploader do
+      use Bow.Uploader
+
+      def store_dir(_) do
+        "minimal"
+      end
+
+      def assets_host do
+        "https://bow.dev/"
+      end
+    end
+
+    test "#store" do
+      file = AssetsHostUploader.new(path: @file_cat)
+      assert {:ok, _results} = Bow.store(file)
+      assert "https://bow.dev/" <> _ = Bow.url(file)
+    end
+  end
 end
