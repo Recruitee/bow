@@ -1,6 +1,10 @@
 # Changelog
 
-# v0.4.1
+# v0.4.2
+
+* Fix `assets_host()` callback return type
+
+## v0.4.1
 
 * Add `assets_host/0` to `Bow.Uploader` for custom assets host
 
