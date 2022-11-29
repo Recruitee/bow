@@ -233,7 +233,7 @@ defmodule Bow.Uploader do
       end
 
   """
-  @callback assets_host() :: binary()
+  @callback assets_host() :: binary() | nil
 
   defmacro __using__(_) do
     quote do
