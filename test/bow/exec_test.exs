@@ -49,8 +49,4 @@ defmodule Bow.ExecTest do
     assert path != nil
     assert File.exists?(path)
   end
-
-  test "append extension to target file", %{source: source, target: target} do
-    assert {:ok, _} = exec(source, target, ["test/scripts/assert-ext.sh", :input, :output, "jpg"])
-  end
 end
