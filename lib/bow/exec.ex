@@ -46,6 +46,7 @@ defmodule Bow.Exec do
         {:input, idx} when is_integer(idx) -> "#{source_path}[#{idx}]"
         :input -> source_path
         :output -> target_path
+        {:output, format} -> "#{format}:#{target_path}"
         arg -> arg
       end)
       |> Enum.map(&to_charlist/1)
