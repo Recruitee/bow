@@ -326,6 +326,15 @@ defmodule Bow.EctoTest do
                headers: [{"Content-Type", "image/png"}]
            }}
 
+        %{url: "http://example.com"} = env ->
+          {:ok,
+           %{
+             env
+             | status: 200,
+               body: File.read!("test/files/bear.png"),
+               headers: [{"Content-Type", "image/png"}]
+           }}
+
         env ->
           {:ok, %{env | status: 404}}
       end)
@@ -351,6 +360,12 @@ defmodule Bow.EctoTest do
 
     test "valid URL" do
       params = %{"remote_avatar_url" => "http://example.com/bear.png"}
+      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], client())
+      assert %Bow{} = user.changes.avatar
+    end
+
+    test "valid URL without file path" do
+      params = %{"remote_avatar_url" => "http://example.com"}
       user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], client())
       assert %Bow{} = user.changes.avatar
     end
