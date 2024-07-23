@@ -1,5 +1,9 @@
 # Changelog
 
+# v0.4.3
+
+* fix: handle valid URL without file path
+
 # v0.4.2
 
 * Fix `assets_host()` callback return type

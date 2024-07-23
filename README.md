@@ -14,7 +14,7 @@ File uploads for Elixir
 ```elixir
 def deps do
   [
-    {:bow, "~> 0.4.2"},
+    {:bow, "~> 0.4.3"},
 
     # for AWS S3 support
     {:ex_aws, "~> 2.0"},
