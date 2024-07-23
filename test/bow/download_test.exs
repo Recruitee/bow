@@ -39,6 +39,15 @@ defmodule Bow.DownloadTest do
                  headers: [{"content-type", "image/png"}]
              }}
 
+          %{url: "http://example.com"} ->
+            {:ok,
+             %{
+               env
+               | status: 200,
+                 body: File.read!(@file_cat),
+                 headers: [{"content-type", "image/png"}]
+             }}
+
           %{url: "http://example.com/dog.jpg"} ->
             {:ok,
              %{
@@ -48,14 +57,14 @@ defmodule Bow.DownloadTest do
                  headers: [{"content-type", "example/dog/nope"}]
              }}
 
-            %{url: "http://example.com/.weird-path"} ->
-              {:ok,
-               %{
-                 env
-                 | status: 200,
-                   body: File.read!(@file_cat),
-                   headers: [{"content-type", "image/png"}]
-               }}
+          %{url: "http://example.com/.weird-path"} ->
+            {:ok,
+             %{
+               env
+               | status: 200,
+                 body: File.read!(@file_cat),
+                 headers: [{"content-type", "image/png"}]
+             }}
 
           _ ->
             {:ok, %{env | status: 404, body: "NotFound"}}
@@ -113,6 +122,16 @@ defmodule Bow.DownloadTest do
 
   test "file not found", %{client: client} do
     assert {:error, %{status: 404}} = download(client, "http://example.com/nope")
+  end
+
+  test "without file path", %{client: client} do
+    assert {:ok, file} = download(client, "http://example.com")
+
+    uuid_name = file.name |> String.split(".") |> Enum.at(0)
+
+    assert {:ok, _} = Ecto.UUID.dump(uuid_name)
+    assert file.path != nil
+    assert File.read!(file.path) == File.read!(@file_cat)
   end
 
   test "dynamic URL", %{client: client} do

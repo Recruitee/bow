@@ -11,7 +11,13 @@ defmodule Bow.Download do
   def download(client \\ %Tesla.Client{}, url) do
     case get!(client, encode(url)) do
       %{status: 200, url: url, body: body} = env ->
-        base = url |> URI.parse() |> Map.get(:path) |> Path.basename()
+        base =
+          url
+          |> URI.parse()
+          |> case do
+            %{path: path} when not is_nil(path) -> path |> Path.basename()
+            _ -> ""
+          end
 
         name =
           case Tesla.get_header(env, "content-type") do
