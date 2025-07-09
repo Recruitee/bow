@@ -58,6 +58,7 @@ defmodule Bow.Mixfile do
       {:sweet_xml, "~> 0.7", optional: true},
 
       # testing & docs
+      {:jason, "~> 1.4", only: :test},
       {:postgrex, ">= 0.0.0", only: :test},
       {:coverex, "~> 1.5", only: :test},
       {:ex_doc, "~> 0.21", only: :dev},
