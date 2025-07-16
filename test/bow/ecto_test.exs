@@ -7,6 +7,11 @@ defmodule Bow.EctoTest do
 
   setup_all do
     {:ok, _} = Repo.start_link()
+
+    on_exit(fn ->
+      Bow.Storage.Local.reset!()
+    end)
+
     :ok
   end
 
@@ -18,10 +23,11 @@ defmodule Bow.EctoTest do
         Repo,
         """
           CREATE TEMPORARY TABLE "bow-test-users" (
-            id      SERIAL PRIMARY KEY,
-            name    VARCHAR(255),
-            avatar  VARCHAR(255),
-            cover_image  VARCHAR(255)
+            id           SERIAL PRIMARY KEY,
+            name         VARCHAR(255),
+            avatar       VARCHAR(255),
+            cover_image  VARCHAR(255),
+            profile      JSONB
           )
           ON COMMIT DROP
         """,
@@ -68,6 +74,19 @@ defmodule Bow.EctoTest do
     end
   end
 
+  defmodule Profile do
+    use Ecto.Schema
+
+    embedded_schema do
+      field(:picture, Avatar.Type)
+    end
+
+    def changeset(struct \\ %__MODULE__{}, params) do
+      struct
+      |> Ecto.Changeset.cast(params, [:picture])
+    end
+  end
+
   defmodule User do
     use Ecto.Schema
 
@@ -75,11 +94,13 @@ defmodule Bow.EctoTest do
       field(:name, :string)
       field(:avatar, Avatar.Type)
       field(:cover_image, CoverImage.Type)
+      embeds_one(:profile, Profile)
     end
 
     def changeset(struct \\ %__MODULE__{}, params) do
       struct
       |> Ecto.Changeset.cast(params, [:name, :avatar, :cover_image])
+      |> Ecto.Changeset.cast_embed(:profile)
     end
   end
 
@@ -148,6 +169,33 @@ defmodule Bow.EctoTest do
 
       assert Bow.Ecto.url(user, :avatar) == "tmp/bow/users/#{user.id}/bear.png"
       assert Bow.Ecto.url(user, :avatar, :thumb) == "tmp/bow/users/#{user.id}/thumb_bear.png"
+    end
+
+    test "cast embed" do
+      user_changeset =
+        User.changeset(%{"name" => "Jon", "profile" => %{"picture" => @upload_bear}})
+
+      assert %Bow{name: "bear.png", path: "test/files/bear.png"} =
+               user_changeset.changes.profile.changes.picture
+
+      user = Repo.insert!(user_changeset)
+
+      assert {:ok, %{original: :ok, thumb: :ok}} ==
+               user
+               |> Map.get(:profile)
+               |> Map.get(:picture)
+               |> Map.put(:scope, user)
+               |> Bow.store()
+
+      user = Repo.reload(user)
+
+      assert %Bow{name: "bear.png", path: nil} = user.profile.picture
+      assert File.exists?("tmp/bow/users/#{user.id}/bear.png")
+
+      picture = Map.put(user.profile.picture, :scope, user)
+
+      assert Bow.url(picture) == "tmp/bow/users/#{user.id}/bear.png"
+      assert Bow.url(picture, :thumb) == "tmp/bow/users/#{user.id}/thumb_bear.png"
     end
 
     test "cast when insert/update custom assets host" do

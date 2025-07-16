@@ -101,7 +101,7 @@ defmodule Bow.Ecto do
         end
 
         def embed_as(_) do
-          :self
+          :dump
         end
 
         def equal?(left, right) do
