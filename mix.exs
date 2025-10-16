@@ -52,7 +52,7 @@ defmodule Bow.Mixfile do
       {:tesla, "~> 1.0"},
       {:ecto, "~> 3.2", optional: true},
       {:ecto_sql, "~> 3.2", optional: true},
-      {:erlexec, "~> 1.19", optional: true},
+      {:erlexec, "~> 2.0", optional: true},
       {:ex_aws, "~> 2.0", optional: true},
       {:ex_aws_s3, "~> 2.0", optional: true},
       {:sweet_xml, "~> 0.7", optional: true},
