@@ -1,6 +1,8 @@
 defmodule BowTest do
   use ExUnit.Case
 
+  import ExUnit.CaptureLog
+
   setup do
     Bow.Storage.Local.reset!()
     :ok
@@ -253,6 +255,16 @@ defmodule BowTest do
       def filename(file, :image_thumb2), do: "thumb2_#{file.name}"
       def filename(file, :image_thumb3), do: "thumb3_#{file.name}"
 
+      # derived versions (returned as next_versions from transform/3)
+      # must be listed explicitly to be URL-addressable
+      def url_versions(file) do
+        case file.ext do
+          ".docx" -> [:original, :pdf, :thumb]
+          ".png" -> [:original, :image_thumb1, :image_thumb2, :image_thumb3]
+          _ -> versions(file)
+        end
+      end
+
       def store_dir(_file) do
         "pipeline"
       end
@@ -352,6 +364,8 @@ defmodule BowTest do
     defmodule UrlUploader do
       use Bow.Uploader
 
+      def url_versions(_file), do: [:original, :pdf, :thumb, :thumb_jpg]
+
       def filename(file, :original), do: file.name
       def filename(file, :pdf), do: "#{file.rootname}.pdf"
       def filename(file, :thumb), do: "thumb_#{file.name}"
@@ -373,6 +387,82 @@ defmodule BowTest do
 
     test "handle nil gracefully" do
       assert Bow.url(nil) == nil
+    end
+  end
+
+  describe "URL version validation" do
+    defmodule StrictUploader do
+      use Bow.Uploader
+
+      def versions(_file), do: [:original, :thumb]
+
+      def store_dir(_) do
+        "strict"
+      end
+    end
+
+    test "logs warning when building URL for undefined version and still returns URL" do
+      file = StrictUploader.new(path: @file_bear)
+
+      log =
+        capture_log(fn ->
+          assert Bow.url(file, :huge) == "tmp/bow/strict/huge_bear.png"
+        end)
+
+      assert log =~ ":huge"
+      assert log =~ "StrictUploader"
+      assert log =~ "[:original, :thumb]"
+    end
+
+    test "does not log warning for defined versions" do
+      file = StrictUploader.new(path: @file_bear)
+
+      log =
+        capture_log(fn ->
+          assert Bow.url(file) == "tmp/bow/strict/bear.png"
+          assert Bow.url(file, :thumb) == "tmp/bow/strict/thumb_bear.png"
+        end)
+
+      assert log == ""
+    end
+
+    test "raises for undefined version when configured with on_undefined_url_version: :raise" do
+      Application.put_env(:bow, :on_undefined_url_version, :raise)
+      on_exit(fn -> Application.delete_env(:bow, :on_undefined_url_version) end)
+
+      file = StrictUploader.new(path: @file_bear)
+
+      assert_raise Bow.Error, ~r/:huge/, fn ->
+        Bow.url(file, :huge)
+      end
+
+      assert Bow.url(file, :thumb) == "tmp/bow/strict/thumb_bear.png"
+    end
+
+    defmodule AliasedUploader do
+      use Bow.Uploader
+
+      def versions(_file), do: [:original]
+
+      # URLs can also be built for versions not generated on store,
+      # e.g. when filename/2 aliases them to an existing file
+      def url_versions(file), do: versions(file) ++ [:thumb_jpg]
+
+      def filename(file, :original), do: file.name
+      def filename(file, :thumb_jpg), do: "thumb_#{file.rootname}.jpg"
+
+      def store_dir(_) do
+        "aliased"
+      end
+    end
+
+    test "url_versions/1 allows versions not returned by versions/1" do
+      Application.put_env(:bow, :on_undefined_url_version, :raise)
+      on_exit(fn -> Application.delete_env(:bow, :on_undefined_url_version) end)
+
+      file = AliasedUploader.new(path: @file_bear)
+
+      assert Bow.url(file, :thumb_jpg) == "tmp/bow/aliased/thumb_bear.jpg"
     end
   end
 

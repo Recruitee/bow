@@ -10,7 +10,13 @@ defmodule Bow do
 
         store_timeout:  30_000,                 # single version upload timeout
         exec_timeout:   15_000,                 # single command execution timeout
+
+        on_undefined_url_version: :warn         # what to do when building URL for a version
+                                                # not listed in uploader's url_versions/1;
+                                                # :warn (default) or :raise
   """
+
+  require Logger
 
   def storage, do: Application.get_env(:bow, :storage, Bow.Storage.Local)
   def store_timeout, do: Application.get_env(:bow, :store_timeout, 30_000)
@@ -191,6 +197,8 @@ defmodule Bow do
   def url(nil, _version, _opts), do: nil
 
   def url(file, version, opts) do
+    validate_url_version!(file, version)
+
     assets_host = file.uploader.assets_host()
 
     opts = opts |> Keyword.put(:assets_host, assets_host)
@@ -200,6 +208,24 @@ defmodule Bow do
       file.uploader.filename(file, version),
       opts
     )
+  end
+
+  defp validate_url_version!(file, version) do
+    url_versions = file.uploader.url_versions(file)
+
+    if version not in url_versions do
+      message =
+        "Bow: building URL of #{inspect(file.name)} for version #{inspect(version)}, " <>
+          "which is not defined in #{inspect(file.uploader)}.url_versions/1 " <>
+          "(defined versions: #{inspect(url_versions)})"
+
+      case Application.get_env(:bow, :on_undefined_url_version, :warn) do
+        :raise -> raise Error, message: message
+        _warn -> Logger.warning(message)
+      end
+    end
+
+    :ok
   end
 
   @spec new(keyword) :: t
