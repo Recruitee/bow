@@ -154,6 +154,29 @@ Bow.Ecto.url(user, :avatar, :thumb) # url of avatar thumb
 Bow.Ecto.url(user, :photo, :thumb, signed: true) # you can pass storage-specific options
 ```
 
+The requested version is validated against the uploader's `url_versions/1`
+(which defaults to `versions/1`). Building a URL for an undefined version logs
+a warning by default; set `config :bow, on_undefined_url_version: :raise` to
+raise `Bow.Error` instead.
+
+Override `url_versions/1` when the URL-addressable versions differ from the
+versions generated on store — e.g. when `transform/3` returns derived versions
+(`{:ok, file, next_versions}`) or when `filename/2` aliases two versions to the
+same stored file:
+
+```elixir
+defmodule MyDocumentUploader do
+  use Bow.Uploader
+
+  def versions(_file), do: [:original, :pdf]
+
+  # :pdf transformation also generates a derived :pdf_thumbnail version
+  def url_versions(file), do: versions(file) ++ [:pdf_thumbnail]
+
+  # ...
+end
+```
+
 ### Overwriting file name
 
 You can change the file name using uploader's `cast/1` callback:
