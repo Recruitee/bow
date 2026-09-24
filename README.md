@@ -14,17 +14,16 @@ File uploads for Elixir
 ```elixir
 def deps do
   [
-    {:bow, "~> 0.4.3"},
+    {:bow, "~> 0.5.0"},
 
     # for AWS S3 support
-    {:ex_aws, "~> 2.0"},
-    {:ex_aws_s3, "~> 2.0"},
-
-    # for Bow.Exec
-    {:erlexec,  "~> 1.7.0"}
+    {:ex_aws, "~> 2.4"},
+    {:ex_aws_s3, "~> 2.4"}
   ]
 end
 ```
+
+Bow requires Elixir 1.16 or newer.
 
 ## Usage
 
@@ -65,8 +64,12 @@ defmodule AttachmentUploader do
 
   # generate image thumbnail
   def transform(source, target, :thumb) do
-    Bow.Exec.exec source, target,
-      "convert ${input} -strip -gravity Center -resize 250x175^ -extent 250x175 ${output}"
+    Bow.with_output(target, fn output_path ->
+      case System.cmd("convert", [source.path, "-resize", "250x175^", output_path]) do
+        {_, 0} -> :ok
+        {cmd_output, exit_code} -> {:error, exit_code: exit_code, output: cmd_output}
+      end
+    end)
   end
 
 
@@ -186,6 +189,54 @@ defmodule AvatarUploader do
 end
 ```
 
+### Downloading remote files
+
+`Bow.Ecto.cast_uploads/4` downloads files given as `remote_<field>_url` params
+(e.g. `remote_avatar_url`). Files are downloaded with Erlang `:httpc` by default,
+you can use any HTTP client by implementing the `Bow.Downloader` behaviour:
+
+```elixir
+# config/config.exs
+config :bow, downloader: MyApp.BowDownloader
+```
+
+See `Bow.Downloader` docs for an example based on Req.
+
+### Processing files
+
+`transform/3` can generate the version in any way you like. `Bow.with_output/2` helps with
+the boring part: it gives you a temporary output path (with the target extension, so tools like
+ImageMagick or libvips pick the right format), checks the file was written and sets it on the target.
+
+With [Vix](https://hexdocs.pm/vix):
+
+```elixir
+def transform(source, target, :thumb) do
+  Bow.with_output(target, fn output_path ->
+    with {:ok, thumb} <- Vix.Vips.Operation.thumbnail(source.path, 250) do
+      Vix.Vips.Image.write_to_file(thumb, output_path)
+    end
+  end)
+end
+```
+
+With an external program:
+
+```elixir
+def transform(source, target, :thumb) do
+  Bow.with_output(target, fn output_path ->
+    case System.cmd("convert", [source.path, "-resize", "250x175^", output_path]) do
+      {_, 0} -> :ok
+      {cmd_output, exit_code} -> {:error, exit_code: exit_code, output: cmd_output}
+    end
+  end)
+end
+```
+
+`System.cmd/3` does not support timeouts. Version generation is limited by `:version_timeout`,
+but the OS process may keep running after it. If you need to kill it, use a library like
+[MuonTrap](https://hexdocs.pm/muontrap) or [erlexec](https://hexdocs.pm/erlexec).
+
 ### Using Bow in test environment
 
 It is best to use local storage adapter when testing.
@@ -206,7 +257,8 @@ mix test
 #### Testing ecto integration
 
 ```bash
-# edit config/config.exs
+# start postgres, or use your own and set TEST_DB_USERNAME, TEST_DB_PASSWORD, TEST_DB_HOST, TEST_DB_PORT
+docker run --rm -d -p 5432:5432 -e POSTGRES_USER=development -e POSTGRES_HOST_AUTH_METHOD=trust postgres:16-alpine
 
 # create test database
 MIX_ENV=test mix ecto.create
@@ -218,11 +270,8 @@ mix test --only ecto
 #### Testing S3 adapter
 
 ```bash
-# install fake-s3 gem
-gem install fakes3
-
-# start fake-s3 server
-fakes3 -r tmp/s3 -p 4567
+# start S3 mock server
+docker run --rm -d -p 4567:9090 -e COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS=test-bucket adobe/s3mock
 
 # run tests
 mix test --only s3
