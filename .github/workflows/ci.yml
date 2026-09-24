@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    name: Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # minimum supported
+          - elixir: "1.16"
+            otp: "26"
+          # latest
+          - elixir: "1.20"
+            otp: "28"
+            lint: true
+    env:
+      MIX_ENV: test
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: development
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      s3:
+        image: adobe/s3mock
+        env:
+          COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: test-bucket
+        ports:
+          - 4567:9090
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-
+
+      - run: mix deps.get
+
+      - if: matrix.lint
+        run: mix format --check-formatted
+
+      - if: matrix.lint
+        run: mix deps.unlock --check-unused
+
+      - if: matrix.lint
+        run: mix compile --warnings-as-errors
+
+      - run: mix ecto.create
+
+      - name: Wait for S3 mock
+        run: timeout 60 bash -c 'until curl -sf http://localhost:4567/ > /dev/null; do sleep 1; done'
+
+      - run: mix test --include ecto --include s3

@@ -303,34 +303,28 @@ defmodule Bow.Ecto do
   Download remote files for given fields, i.e.
   `params["remote_avatar_url"] = "http://example.com/some/file.png"`
 
+  Options are passed to `Bow.Download.download/2`, e.g. `:downloader`.
+
   Example
       changeset
       |> cast(params, [:name, :avatar])
       |> Bow.Ecto.cast_uploads(params, [:avatar])
   """
-  @spec cast_uploads(any, map, list, Tesla.Client.t()) ::
-          Ecto.Changeset.t()
-  def cast_uploads(changeset, params, fields, client \\ %Tesla.Client{}) do
-    Ecto.Changeset.cast(changeset, download_params(params, fields, client), fields)
+  @spec cast_uploads(any, map, list, keyword) :: Ecto.Changeset.t()
+  def cast_uploads(changeset, params, fields, opts \\ []) do
+    Ecto.Changeset.cast(changeset, download_params(params, fields, opts), fields)
   end
 
-  @spec download_params(map, list, Tesla.Client.t()) :: map
-  def download_params(params, fields, client \\ %Tesla.Client{}) do
+  @spec download_params(map, list, keyword) :: map
+  def download_params(params, fields, opts \\ []) do
     Enum.reduce(fields, params, fn field, params ->
       field = to_string(field)
 
-      case params["remote_#{field}_url"] do
-        nil ->
-          params
-
-        "" ->
-          params
-
-        url ->
-          case Bow.Download.download(client, url) do
-            {:ok, file} -> Map.put(params, field, file)
-            _ -> params
-          end
+      with url when url not in [nil, ""] <- params["remote_#{field}_url"],
+           {:ok, file} <- Bow.Download.download(url, opts) do
+        Map.put(params, field, file)
+      else
+        _ -> params
       end
     end)
   end

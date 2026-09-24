@@ -9,7 +9,7 @@ defmodule Bow do
         storage_prefix: "priv/static/uploads",  # storage directory prefix
 
         store_timeout:  30_000,                 # single version upload timeout
-        exec_timeout:   15_000,                 # single command execution timeout
+        version_timeout: 60_000,                # single version processing timeout
   """
 
   def storage, do: Application.get_env(:bow, :storage, Bow.Storage.Local)
@@ -105,6 +105,68 @@ defmodule Bow do
       |> combine_results()
     else
       {:error, :uploader_mismatch}
+    end
+  end
+
+  @doc """
+  Run `fun` with an output path for `target` and set the result on it
+
+  Use it in `c:Bow.Uploader.transform/3` to write the processed file.
+  The output path has the same extension as `target` name, so tools choosing
+  the format based on extension (like libvips or ImageMagick) work out of the box.
+  The file is removed when the calling process exits.
+
+  `fun` must write the file and return `:ok` or `{:error, reason}`.
+
+      # thumbnail with Vix
+      def transform(source, target, :thumb) do
+        Bow.with_output(target, fn output_path ->
+          with {:ok, thumb} <- Vix.Vips.Operation.thumbnail(source.path, 250) do
+            Vix.Vips.Image.write_to_file(thumb, output_path)
+          end
+        end)
+      end
+
+      # thumbnail with ImageMagick
+      def transform(source, target, :thumb) do
+        Bow.with_output(target, fn output_path ->
+          case System.cmd("convert", [source.path, "-resize", "250x175^", output_path], stderr_to_stdout: true) do
+            {_, 0} -> :ok
+            {cmd_output, exit_code} -> {:error, exit_code: exit_code, output: cmd_output}
+          end
+        end)
+      end
+  """
+  @spec with_output(t, (output_path :: Path.t() -> :ok | {:error, any})) ::
+          {:ok, t} | {:error, any}
+  def with_output(target, fun) when is_function(fun, 1) do
+    tmp_path = Plug.Upload.random_file!("bow-output")
+    # random_file! does not support extensions, write output next to it and move it back
+    # so the file is still removed together with the process
+    output_path = tmp_path <> target.ext
+
+    case fun.(output_path) do
+      :ok ->
+        keep_output(target, output_path, tmp_path)
+
+      {:error, reason} ->
+        File.rm(output_path)
+        {:error, reason}
+
+      other ->
+        File.rm(output_path)
+
+        raise ArgumentError,
+              "expected :ok or {:error, reason} from with_output/2 function, got: #{inspect(other)}"
+    end
+  end
+
+  defp keep_output(target, output_path, tmp_path) do
+    if File.exists?(output_path) do
+      File.rename!(output_path, tmp_path)
+      {:ok, set(target, :path, tmp_path)}
+    else
+      {:error, :output_not_found}
     end
   end
 

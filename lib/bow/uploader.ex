@@ -40,8 +40,12 @@ defmodule Bow.Uploader do
 
         # generate image thumbnail
         def transform(source, target, :thumb) do
-          Bow.Exec.exec source, target,
-            "convert ${input} -strip -gravity Center -resize 250x175^ -extent 250x175 ${output}"
+          Bow.with_output(target, fn output_path ->
+            case System.cmd("convert", [source.path, "-resize", "250x175^", output_path]) do
+              {_, 0} -> :ok
+              {cmd_output, exit_code} -> {:error, exit_code: exit_code, output: cmd_output}
+            end
+          end)
         end
 
 
@@ -178,11 +182,15 @@ defmodule Bow.Uploader do
       defmodule MyImageUploader do
         # generate image thumbnail
         def transform(source, target, :thumb) do
-          # Bow.Exec allows executing any system command replacing ${input} and ${output}
-          # with correct paths. It can also take :timeout option to prevent resource consumtion.
-          # Refer to Bow.Exec documentation for more details
-          Bow.Exec.exec source, target,
-            "convert ${input} -strip -gravity Center -resize 250x175^ -extent 250x175 ${output}"
+          # Bow.with_output gives a temporary output path (with target extension)
+          # and sets it on target when the file was written.
+          # Refer to Bow.with_output/2 documentation for more details
+          Bow.with_output(target, fn output_path ->
+            case System.cmd("convert", [source.path, "-resize", "250x175^", output_path]) do
+              {_, 0} -> :ok
+              {cmd_output, exit_code} -> {:error, exit_code: exit_code, output: cmd_output}
+            end
+          end)
         end
       end
 
@@ -191,8 +199,7 @@ defmodule Bow.Uploader do
       defmodule MyImageUploader do
         # generate image thumbnail and then micro_thumb version based on that
         def transform(source, target, :thumb) do
-          with {:ok, thumb_file} <- Bow.Exec.exec source, target
-            "convert ${input} -strip -gravity Center -resize 250x175^ -extent 250x175 ${output}" do
+          with {:ok, thumb_file} <- Bow.with_output(target, &make_thumb(source.path, &1)) do
             {:ok, thumb_file, [:micro_thumb]}
           end
         end
