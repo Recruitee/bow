@@ -13,14 +13,19 @@ Breaking changes:
 * `Bow.Download.download(client, url)` is now `Bow.Download.download(url, opts)`
 * `Bow.Ecto.cast_uploads/4` and `Bow.Ecto.download_params/3` take options (e.g. `downloader: ...`)
   instead of a Tesla client
-* `Bow.Download.download/2` errors are `{:error, %{status: status, headers: headers}}`
-  and `{:error, :too_many_redirects}`
+* `Bow.Download.download/2` errors are `{:error, %{status: status, headers: headers}}`,
+  `{:error, :too_many_redirects}`, `{:error, :max_size_exceeded}` and `{:error, :timeout}`
+* Default downloader sends `user-agent: bow`, override it with the `:headers` option
 
 Other changes:
 
 * Updated dependencies (Ecto 3.10+, Plug 1.14+, ExAws 2.4+)
 * Add `Bow.with_output/2` helper for writing processed files
 * Downloaded files are streamed to disk instead of being loaded into memory
+* `Bow.Download.download/2` and `Bow.Ecto.cast_uploads/4` options: `:headers`, `:max_size` (file size limit)
+  and `:timeout` (total download time)
+* Credentials (`authorization`, `cookie`, ...) are removed from `:headers` on redirect to a different origin
+* Document SSRF risk of downloading user provided URLs and the ExAws 2.7 hackney `HEAD` issue when loading files from `Bow.Storage.S3`
 * fix: `Bow.Download` no longer requires Ecto
 
 # v0.4.3

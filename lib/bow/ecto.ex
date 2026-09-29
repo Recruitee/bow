@@ -303,12 +303,17 @@ defmodule Bow.Ecto do
   Download remote files for given fields, i.e.
   `params["remote_avatar_url"] = "http://example.com/some/file.png"`
 
-  Options are passed to `Bow.Download.download/2`, e.g. `:downloader`.
+  Options are passed to `Bow.Download.download/2`, e.g. `:max_size`, `:timeout` or `:headers`.
+
+  > #### Untrusted URLs {: .warning}
+  >
+  > The URLs come from users, see `Bow.Download.download/2` about validating them
+  > and limiting the file size.
 
   Example
       changeset
       |> cast(params, [:name, :avatar])
-      |> Bow.Ecto.cast_uploads(params, [:avatar])
+      |> Bow.Ecto.cast_uploads(params, [:avatar], max_size: 10_000_000)
   """
   @spec cast_uploads(any, map, list, keyword) :: Ecto.Changeset.t()
   def cast_uploads(changeset, params, fields, opts \\ []) do

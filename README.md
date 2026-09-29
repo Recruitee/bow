@@ -23,6 +23,11 @@ def deps do
 end
 ```
 
+> **Note**
+> Loading files with `Bow.Storage.S3` uses `ExAws.S3.download_file/4`, which sends a `HEAD` request.
+> The hackney client of ExAws 2.7 crashes on `HEAD` responses, use the Req client instead:
+> `config :ex_aws, http_client: ExAws.Request.Req` (requires `{:req, "~> 0.5"}`).
+
 Bow requires Elixir 1.16 or newer.
 
 ## Usage
@@ -192,15 +197,31 @@ end
 ### Downloading remote files
 
 `Bow.Ecto.cast_uploads/4` downloads files given as `remote_<field>_url` params
-(e.g. `remote_avatar_url`). Files are downloaded with Erlang `:httpc` by default,
-you can use any HTTP client by implementing the `Bow.Downloader` behaviour:
+(e.g. `remote_avatar_url`). Files are streamed to disk with Erlang `:httpc` by default.
+
+```elixir
+changeset
+|> Bow.Ecto.cast_uploads(params, [:avatar],
+  max_size: 10_000_000,
+  timeout: 15_000,
+  headers: [{"user-agent", "my-app"}]
+)
+```
+
+On redirect to a different origin, credentials like `authorization` and `cookie` are removed from `:headers`.
+
+> **Warning**
+> The URL comes from users, so it can point to your internal services, e.g. the
+> `http://169.254.169.254/` cloud metadata endpoint (SSRF). Validate the URL before downloading
+> it and always set `:max_size` to protect the disk.
+
+You can use any HTTP client by implementing the `Bow.Downloader` behaviour
+(see its docs for an example based on Req):
 
 ```elixir
 # config/config.exs
 config :bow, downloader: MyApp.BowDownloader
 ```
-
-See `Bow.Downloader` docs for an example based on Req.
 
 ### Processing files
 

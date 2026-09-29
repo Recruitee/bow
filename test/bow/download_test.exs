@@ -82,4 +82,51 @@ defmodule Bow.DownloadTest do
 
     assert {:ok, %Bow{name: "cat.png"}} = Bow.Download.download("http://example.com/cat.png")
   end
+
+  describe "headers on redirect" do
+    @headers [
+      {"Authorization", "Bearer secret"},
+      {"cookie", "session=1"},
+      {"If-None-Match", "etag"},
+      {"accept", "image/*"}
+    ]
+
+    test "are passed to the downloader" do
+      assert {:ok, _} = download("http://example.com/cat.png", headers: @headers)
+      assert_received {:downloader_get, _url, _path, opts}
+      assert opts[:headers] == @headers
+    end
+
+    test "keep credentials on the same origin" do
+      assert {:ok, _} = download("http://example.com/kitten.png", headers: @headers)
+      assert_received {:downloader_get, "http://example.com/kitten.png", _path, _opts}
+      assert_received {:downloader_get, "http://example.com/cat.png", _path, opts}
+
+      assert opts[:headers] == [
+               {"Authorization", "Bearer secret"},
+               {"cookie", "session=1"},
+               {"accept", "image/*"}
+             ]
+    end
+
+    test "remove credentials on a different origin" do
+      assert {:ok, file} = download("http://example.com/to-cdn.png", headers: @headers)
+      assert file.name == "cat.png"
+      assert_received {:downloader_get, "http://example.com/to-cdn.png", _path, _opts}
+      assert_received {:downloader_get, "https://cdn.example.org/cat.png", _path, opts}
+      assert opts[:headers] == [{"accept", "image/*"}]
+    end
+  end
+
+  test "max size is checked after download" do
+    assert {:error, :max_size_exceeded} = download("http://example.com/cat.png", max_size: 10)
+    assert_received {:downloader_get, _url, path, _opts}
+    refute File.exists?(path)
+  end
+
+  test "removes file on error" do
+    assert {:error, %{status: 404}} = download("http://example.com/nope")
+    assert_received {:downloader_get, _url, path, _opts}
+    refute File.exists?(path)
+  end
 end

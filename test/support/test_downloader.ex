@@ -6,12 +6,16 @@ defmodule Bow.TestDownloader do
   @file_bear "test/files/bear.png"
 
   @impl true
-  def get(url, path, _opts) do
+  def get(url, path, opts) do
+    send(self(), {:downloader_get, url, path, opts})
+
     case url do
       "http://example.com/cat.png" -> ok(path, @file_cat, [{"content-type", "image/png"}])
       "http://example.com/kitten.png" -> redirect("http://example.com/cat.png")
       "http://example.com/relative/kitten.png" -> redirect("../cat.png")
       "http://example.com/loop.png" -> redirect("http://example.com/loop.png")
+      "http://example.com/to-cdn.png" -> redirect("https://cdn.example.org/cat.png")
+      "https://cdn.example.org/cat.png" -> ok(path, @file_cat, [{"content-type", "image/png"}])
       "http://example.com/notype.png" -> ok(path, @file_cat, [])
       "http://example.com/noext" -> ok(path, @file_cat, [])
       "http://example.com/u" <> _ -> ok(path, @file_cat, [{"content-type", "image/png"}])
