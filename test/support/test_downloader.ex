@@ -11,11 +11,8 @@ defmodule Bow.TestDownloader do
 
     case url do
       "http://example.com/cat.png" -> ok(path, @file_cat, [{"content-type", "image/png"}])
-      "http://example.com/kitten.png" -> redirect("http://example.com/cat.png")
-      "http://example.com/relative/kitten.png" -> redirect("../cat.png")
-      "http://example.com/loop.png" -> redirect("http://example.com/loop.png")
-      "http://example.com/to-cdn.png" -> redirect("https://cdn.example.org/cat.png")
-      "https://cdn.example.org/cat.png" -> ok(path, @file_cat, [{"content-type", "image/png"}])
+      # redirected to http://example.com/cat.png
+      "http://example.com/kitten.png" -> ok(path, @file_cat, "http://example.com/cat.png")
       "http://example.com/notype.png" -> ok(path, @file_cat, [])
       "http://example.com/noext" -> ok(path, @file_cat, [])
       "http://example.com/u" <> _ -> ok(path, @file_cat, [{"content-type", "image/png"}])
@@ -24,14 +21,18 @@ defmodule Bow.TestDownloader do
       "http://example.com/.weird-path" -> ok(path, @file_cat, [{"content-type", "image/png"}])
       "http://example.com/bear.png" -> ok(path, @file_bear, [{"content-type", "image/png"}])
       "http://example.com/broken" -> {:error, :econnrefused}
-      _ -> {:ok, 404, []}
+      _ -> {:error, %{status: 404, headers: []}}
     end
   end
 
-  defp ok(path, file, headers) do
+  defp ok(path, file, final_url) when is_binary(final_url) do
     File.cp!(file, path)
-    {:ok, 200, headers}
+    {:ok, %{url: final_url, headers: [{"content-type", "image/png"}]}}
   end
 
-  defp redirect(location), do: {:ok, 301, [{"location", location}]}
+  # without :url, like a downloader that does not know the final URL
+  defp ok(path, file, headers) do
+    File.cp!(file, path)
+    {:ok, %{headers: headers}}
+  end
 end

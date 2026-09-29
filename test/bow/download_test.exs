@@ -13,24 +13,10 @@ defmodule Bow.DownloadTest do
     assert File.read!(file.path) == File.read!(@file_cat)
   end
 
-  test "file with redirect" do
+  test "name from final URL returned by the downloader" do
     assert {:ok, file} = download("http://example.com/kitten.png")
     assert file.name == "cat.png"
     assert File.read!(file.path) == File.read!(@file_cat)
-  end
-
-  test "file with relative redirect" do
-    assert {:ok, file} = download("http://example.com/relative/kitten.png")
-    assert file.name == "cat.png"
-  end
-
-  test "too many redirects" do
-    assert {:error, :too_many_redirects} = download("http://example.com/loop.png")
-  end
-
-  test "max redirects option" do
-    assert {:error, :too_many_redirects} =
-             download("http://example.com/kitten.png", max_redirects: 0)
   end
 
   test "file without content type" do
@@ -83,39 +69,15 @@ defmodule Bow.DownloadTest do
     assert {:ok, %Bow{name: "cat.png"}} = Bow.Download.download("http://example.com/cat.png")
   end
 
-  describe "headers on redirect" do
-    @headers [
-      {"Authorization", "Bearer secret"},
-      {"cookie", "session=1"},
-      {"If-None-Match", "etag"},
-      {"accept", "image/*"}
-    ]
+  test "options are passed to the downloader" do
+    headers = [{"Authorization", "Bearer secret"}, {"accept", "image/*"}]
 
-    test "are passed to the downloader" do
-      assert {:ok, _} = download("http://example.com/cat.png", headers: @headers)
-      assert_received {:downloader_get, _url, _path, opts}
-      assert opts[:headers] == @headers
-    end
+    assert {:ok, _} =
+             download("http://example.com/cat.png", headers: headers, max_redirects: 2)
 
-    test "keep credentials on the same origin" do
-      assert {:ok, _} = download("http://example.com/kitten.png", headers: @headers)
-      assert_received {:downloader_get, "http://example.com/kitten.png", _path, _opts}
-      assert_received {:downloader_get, "http://example.com/cat.png", _path, opts}
-
-      assert opts[:headers] == [
-               {"Authorization", "Bearer secret"},
-               {"cookie", "session=1"},
-               {"accept", "image/*"}
-             ]
-    end
-
-    test "remove credentials on a different origin" do
-      assert {:ok, file} = download("http://example.com/to-cdn.png", headers: @headers)
-      assert file.name == "cat.png"
-      assert_received {:downloader_get, "http://example.com/to-cdn.png", _path, _opts}
-      assert_received {:downloader_get, "https://cdn.example.org/cat.png", _path, opts}
-      assert opts[:headers] == [{"accept", "image/*"}]
-    end
+    assert_received {:downloader_get, "http://example.com/cat.png", _path, opts}
+    assert opts[:headers] == headers
+    assert opts[:max_redirects] == 2
   end
 
   test "max size is checked after download" do

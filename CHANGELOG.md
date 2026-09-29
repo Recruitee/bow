@@ -9,7 +9,8 @@ Breaking changes:
   `Bow.with_output/2` and any tool you like (`System.cmd/3`, Vix, MuonTrap, erlexec...).
   `:exec_timeout` config removed
 * `tesla` dependency removed. Remote files are downloaded with `:httpc` by default (`Bow.Downloader.Httpc`),
-  use `config :bow, downloader: MyDownloader` to plug in your own `Bow.Downloader` (e.g. Req or Tesla)
+  use `config :bow, downloader: MyDownloader` to plug in your own `Bow.Downloader` (e.g. Req or Tesla).
+  Downloaders follow redirects themselves and return the final URL used for the file name
 * `Bow.Download.download(client, url)` is now `Bow.Download.download(url, opts)`
 * `Bow.Ecto.cast_uploads/4` and `Bow.Ecto.download_params/3` take options (e.g. `downloader: ...`)
   instead of a Tesla client
@@ -24,7 +25,8 @@ Other changes:
 * Downloaded files are streamed to disk instead of being loaded into memory
 * `Bow.Download.download/2` and `Bow.Ecto.cast_uploads/4` options: `:headers`, `:max_size` (file size limit)
   and `:timeout` (total download time)
-* Credentials (`authorization`, `cookie`, ...) are removed from `:headers` on redirect to a different origin
+* `Bow.Downloader.Httpc` removes credentials (`authorization`, `cookie`, ...) from `:headers` on redirect
+  to a different origin, `:max_redirects` option (defaults to 5)
 * Document SSRF risk of downloading user provided URLs and the ExAws 2.7 hackney `HEAD` issue when loading files from `Bow.Storage.S3`
 * fix: `Bow.Download` no longer requires Ecto
 

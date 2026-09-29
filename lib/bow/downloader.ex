@@ -20,23 +20,47 @@ defmodule Bow.Downloader do
 
         @impl true
         def get(url, path, opts) do
-          req_opts = [redirect: false, into: File.stream!(path), headers: Keyword.get(opts, :headers, [])]
+          req_opts = [
+            url: url,
+            into: File.stream!(path),
+            headers: Keyword.get(opts, :headers, []),
+            max_redirects: Keyword.get(opts, :max_redirects, 5)
+          ]
 
-          case Req.get(url, req_opts) do
-            {:ok, %{status: status, headers: headers}} ->
-              {:ok, status, for({name, values} <- headers, value <- values, do: {name, value})}
+          case Req.run(req_opts) do
+            {req, %Req.Response{status: status} = resp} when status in 200..299 ->
+              {:ok, %{url: URI.to_string(req.url), headers: headers(resp)}}
 
-            {:error, reason} ->
-              {:error, reason}
+            {_req, %Req.Response{status: status} = resp} ->
+              {:error, %{status: status, headers: headers(resp)}}
+
+            {_req, exception} ->
+              {:error, exception}
           end
         end
+
+        defp headers(resp) do
+          for {name, values} <- resp.headers, value <- values, do: {name, value}
+        end
       end
+
+  Req follows redirects, but on redirect to a different origin it removes only
+  the `authorization` header, other credentials like `cookie` are sent as they are.
   """
 
   @type headers :: [{name :: String.t(), value :: String.t()}]
 
+  @typedoc """
+  Successful response
+
+  - `:url` - final URL after redirects, used for the file name. When missing,
+    the requested URL is used.
+  - `:headers` - response headers with lowercase names
+  """
+  @type response :: %{required(:headers) => headers, optional(:url) => String.t()}
+
   @doc """
-  Make a single GET request
+  Download the file with a GET request
 
   Arguments:
   - `url` - URL to request
@@ -47,12 +71,13 @@ defmodule Bow.Downloader do
       `{:error, :max_size_exceeded}` when it's exceeded
     - `:timeout` - total download time in milliseconds
 
-  Must not follow redirects, `Bow.Download` takes care of them and calls the downloader again
-  with the next URL. Options may differ between calls, e.g. credentials in `:headers` are removed
-  on redirect to a different origin, so always use the given `opts` instead of static configuration.
+  The downloader is responsible for following redirects (and supporting `:max_redirects`
+  if it makes sense for it). On redirect to a different origin (scheme, host or port) make sure
+  credentials like `authorization` and `cookie` from `:headers` do not leak to the new host.
 
-  Must return the response status and headers with lowercase names.
+  Returns `{:ok, response}` for 2xx responses and `{:error, %{status: status, headers: headers}}`
+  for other statuses.
   """
   @callback get(url :: String.t(), path :: Path.t(), opts :: keyword) ::
-              {:ok, status :: pos_integer, headers} | {:error, any}
+              {:ok, response} | {:error, any}
 end

@@ -25,9 +25,33 @@ defmodule Bow.Downloader.HttpcTest do
     end
 
     get "/redirect" do
-      conn
-      |> put_resp_header("location", "/cat.jpg")
-      |> send_resp(302, "")
+      redirect(conn, 302, "/cat.jpg")
+    end
+
+    get "/relative/redirect" do
+      redirect(conn, 301, "../cat.jpg")
+    end
+
+    get "/loop" do
+      redirect(conn, 307, "/loop")
+    end
+
+    get "/slow-loop" do
+      Process.sleep(150)
+      redirect(conn, 302, "/slow-loop")
+    end
+
+    get "/no-location" do
+      send_resp(conn, 302, "")
+    end
+
+    get "/to-headers" do
+      redirect(conn, 302, "/headers")
+    end
+
+    # same port, different host, so a different origin
+    get "/to-other-origin" do
+      redirect(conn, 302, "http://localhost:#{conn.port}/headers")
     end
 
     get "/slow" do
@@ -60,6 +84,12 @@ defmodule Bow.Downloader.HttpcTest do
     match _ do
       send_resp(conn, 404, "nope")
     end
+
+    defp redirect(conn, status, location) do
+      conn
+      |> put_resp_header("location", location)
+      |> send_resp(status, "")
+    end
   end
 
   setup_all do
@@ -74,25 +104,78 @@ defmodule Bow.Downloader.HttpcTest do
   end
 
   test "writes body to file", %{base_url: base_url, path: path} do
-    assert {:ok, 200, headers} = Httpc.get(base_url <> "/cat.jpg", path, [])
+    assert {:ok, %{headers: headers}} = Httpc.get(base_url <> "/cat.jpg", path, [])
     assert {"content-type", "image/jpeg"} in headers
     assert File.read!(path) == File.read!(@file_cat)
   end
 
   test "streams big body to file", %{base_url: base_url, path: path} do
-    assert {:ok, 200, _headers} = Httpc.get(base_url <> "/big", path, [])
+    assert {:ok, _response} = Httpc.get(base_url <> "/big", path, [])
     assert File.stat!(path).size == @big_size
   end
 
-  test "does not follow redirects", %{base_url: base_url, path: path} do
-    assert {:ok, 302, headers} = Httpc.get(base_url <> "/redirect", path, [])
-    assert {"location", "/cat.jpg"} in headers
+  test "returns error with status of failed request", %{base_url: base_url, path: path} do
+    assert {:error, %{status: 404, headers: _}} = Httpc.get(base_url <> "/nope", path, [])
     assert File.read!(path) == ""
   end
 
-  test "returns status of failed request", %{base_url: base_url, path: path} do
-    assert {:ok, 404, _headers} = Httpc.get(base_url <> "/nope", path, [])
-    assert File.read!(path) == ""
+  describe "redirects" do
+    @headers [
+      {"Authorization", "Bearer secret"},
+      {"cookie", "session=1"},
+      {"If-None-Match", "etag"},
+      {"accept", "image/*"}
+    ]
+
+    test "are followed", %{base_url: base_url, path: path} do
+      assert {:ok, %{url: url}} = Httpc.get(base_url <> "/redirect", path, [])
+      assert url == base_url <> "/cat.jpg"
+      assert File.read!(path) == File.read!(@file_cat)
+    end
+
+    test "relative location", %{base_url: base_url, path: path} do
+      assert {:ok, %{url: url}} = Httpc.get(base_url <> "/relative/redirect", path, [])
+      assert url == base_url <> "/cat.jpg"
+    end
+
+    test "too many redirects", %{base_url: base_url, path: path} do
+      assert {:error, :too_many_redirects} = Httpc.get(base_url <> "/loop", path, [])
+    end
+
+    test "max redirects option", %{base_url: base_url, path: path} do
+      assert {:error, :too_many_redirects} =
+               Httpc.get(base_url <> "/redirect", path, max_redirects: 0)
+    end
+
+    test "without location", %{base_url: base_url, path: path} do
+      assert {:error, %{status: 302}} = Httpc.get(base_url <> "/no-location", path, [])
+    end
+
+    test "timeout covers all redirects", %{base_url: base_url, path: path} do
+      assert {:error, :timeout} =
+               Httpc.get(base_url <> "/slow-loop", path, timeout: 400, max_redirects: 10)
+    end
+
+    test "keep credentials on the same origin", %{base_url: base_url, path: path} do
+      assert {:ok, _response} = Httpc.get(base_url <> "/to-headers", path, headers: @headers)
+
+      body = File.read!(path)
+      assert body =~ "authorization: Bearer secret"
+      assert body =~ "cookie: session=1"
+      assert body =~ "accept: image/*"
+      refute body =~ "if-none-match"
+    end
+
+    test "remove credentials on a different origin", %{base_url: base_url, path: path} do
+      assert {:ok, %{url: "http://localhost:" <> _}} =
+               Httpc.get(base_url <> "/to-other-origin", path, headers: @headers)
+
+      body = File.read!(path)
+      refute body =~ "authorization"
+      refute body =~ "cookie"
+      refute body =~ "if-none-match"
+      assert body =~ "accept: image/*"
+    end
   end
 
   test "timeout", %{base_url: base_url, path: path} do
@@ -112,13 +195,13 @@ defmodule Bow.Downloader.HttpcTest do
   end
 
   test "default user agent", %{base_url: base_url, path: path} do
-    assert {:ok, 200, _headers} = Httpc.get(base_url <> "/headers", path, [])
+    assert {:ok, _response} = Httpc.get(base_url <> "/headers", path, [])
     assert File.read!(path) =~ "user-agent: bow"
   end
 
   test "custom headers", %{base_url: base_url, path: path} do
     headers = [{"User-Agent", "my-app"}, {"x-token", "secret"}]
-    assert {:ok, 200, _headers} = Httpc.get(base_url <> "/headers", path, headers: headers)
+    assert {:ok, _response} = Httpc.get(base_url <> "/headers", path, headers: headers)
 
     body = File.read!(path)
     assert body =~ "user-agent: my-app"
@@ -140,7 +223,7 @@ defmodule Bow.Downloader.HttpcTest do
 
   test "max size not exceeded", %{base_url: base_url, path: path} do
     size = File.stat!(@file_cat).size
-    assert {:ok, 200, _headers} = Httpc.get(base_url <> "/cat.jpg", path, max_size: size)
+    assert {:ok, _response} = Httpc.get(base_url <> "/cat.jpg", path, max_size: size)
   end
 
   test "connection error", %{path: path} do
@@ -160,18 +243,26 @@ defmodule Bow.Downloader.HttpcTest do
     @impl true
     def get(url, path, opts) do
       req_opts = [
-        redirect: false,
+        url: url,
         into: File.stream!(path),
-        headers: Keyword.get(opts, :headers, [])
+        headers: Keyword.get(opts, :headers, []),
+        max_redirects: Keyword.get(opts, :max_redirects, 5)
       ]
 
-      case Req.get(url, req_opts) do
-        {:ok, %{status: status, headers: headers}} ->
-          {:ok, status, for({name, values} <- headers, value <- values, do: {name, value})}
+      case Req.run(req_opts) do
+        {req, %Req.Response{status: status} = resp} when status in 200..299 ->
+          {:ok, %{url: URI.to_string(req.url), headers: headers(resp)}}
 
-        {:error, reason} ->
-          {:error, reason}
+        {_req, %Req.Response{status: status} = resp} ->
+          {:error, %{status: status, headers: headers(resp)}}
+
+        {_req, exception} ->
+          {:error, exception}
       end
+    end
+
+    defp headers(resp) do
+      for {name, values} <- resp.headers, value <- values, do: {name, value}
     end
   end
 

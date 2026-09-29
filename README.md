@@ -208,7 +208,8 @@ changeset
 )
 ```
 
-On redirect to a different origin, credentials like `authorization` and `cookie` are removed from `:headers`.
+The default downloader follows up to 5 redirects (`:max_redirects` option). On redirect to a different
+origin, credentials like `authorization` and `cookie` are removed from `:headers`.
 
 > **Warning**
 > The URL comes from users, so it can point to your internal services, e.g. the
@@ -216,7 +217,8 @@ On redirect to a different origin, credentials like `authorization` and `cookie`
 > it and always set `:max_size` to protect the disk.
 
 You can use any HTTP client by implementing the `Bow.Downloader` behaviour
-(see its docs for an example based on Req):
+(see its docs for an example based on Req). Your downloader is then responsible for following
+redirects without leaking credentials to a different origin:
 
 ```elixir
 # config/config.exs
