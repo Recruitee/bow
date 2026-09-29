@@ -36,6 +36,19 @@ defmodule Bow.WithOutputTest do
     refute File.exists?(output_path)
   end
 
+  test "removes partial output when function raises", %{target: target} do
+    assert_raise RuntimeError, "boom", fn ->
+      Bow.with_output(target, fn output_path ->
+        File.write!(output_path, "partial")
+        send(self(), {:output_path, output_path})
+        raise "boom"
+      end)
+    end
+
+    assert_received {:output_path, output_path}
+    refute File.exists?(output_path)
+  end
+
   test "output not written", %{target: target} do
     assert {:error, :output_not_found} = Bow.with_output(target, fn _output_path -> :ok end)
   end

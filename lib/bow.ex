@@ -145,19 +145,21 @@ defmodule Bow do
     # so the file is still removed together with the process
     output_path = tmp_path <> target.ext
 
-    case fun.(output_path) do
-      :ok ->
-        keep_output(target, output_path, tmp_path)
+    try do
+      case fun.(output_path) do
+        :ok ->
+          keep_output(target, output_path, tmp_path)
 
-      {:error, reason} ->
-        File.rm(output_path)
-        {:error, reason}
+        {:error, reason} ->
+          {:error, reason}
 
-      other ->
-        File.rm(output_path)
-
-        raise ArgumentError,
-              "expected :ok or {:error, reason} from with_output/2 function, got: #{inspect(other)}"
+        other ->
+          raise ArgumentError,
+                "expected :ok or {:error, reason} from with_output/2 function, got: #{inspect(other)}"
+      end
+    after
+      # no-op after a successful rename, removes partial output otherwise
+      File.rm(output_path)
     end
   end
 

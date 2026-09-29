@@ -118,8 +118,11 @@ defmodule Bow.Downloader.Httpc do
   end
 
   defp write_chunk(ref, file, size, chunk, state) do
-    IO.binwrite(file, chunk)
-    stream_body(ref, file, size, state)
+    with :ok <- IO.binwrite(file, chunk) do
+      stream_body(ref, file, size, state)
+    else
+      {:error, reason} -> cancel(ref, reason)
+    end
   end
 
   defp check_content_length(headers, max_size) do
