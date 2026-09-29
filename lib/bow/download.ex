@@ -1,52 +1,64 @@
 defmodule Bow.Download do
-  use Tesla, only: [:get]
-
-  plug(Tesla.Middleware.FollowRedirects)
-
   @doc """
   Download file from given URL
+
+  The file name is taken from the final URL returned by the downloader (after redirects),
+  or the requested URL, with extension based on the `content-type` header.
+
+  > #### Untrusted URLs {: .warning}
+  >
+  > When the URL comes from users (e.g. `remote_avatar_url` params), it can point to
+  > internal services, like `http://169.254.169.254/` cloud metadata endpoint (SSRF).
+  > Validate the URL before downloading it and set `:max_size`.
+
+  Options:
+  - `:downloader` - module implementing `Bow.Downloader`, defaults to `:downloader` config
+    or `Bow.Downloader.Httpc`
+  - `:headers` - request headers as a list of `{name, value}` tuples
+  - `:max_size` - maximum file size in bytes. The downloader should stop the download when it's
+    exceeded, Bow checks the downloaded file size as well. Returns `{:error, :max_size_exceeded}`.
+  - `:timeout` - download timeout in milliseconds, see the downloader docs for the default
+
+  Other options (e.g. `:max_redirects`) are passed to the downloader. Redirects are followed
+  by the downloader, see `Bow.Downloader.Httpc` for the default behaviour.
   """
-  @spec download(client :: Tesla.Client.t(), url :: String.t()) ::
-          {:ok, Bow.t()} | {:error, any}
-  def download(client \\ %Tesla.Client{}, url) do
-    case get!(client, encode(url)) do
-      %{status: 200, url: url, body: body} = env ->
-        base =
-          url
-          |> URI.parse()
-          |> case do
-            %{path: path} when not is_nil(path) -> path |> Path.basename()
-            _ -> ""
-          end
+  @spec download(url :: String.t(), opts :: keyword) :: {:ok, Bow.t()} | {:error, any}
+  def download(url, opts \\ []) do
+    {downloader, opts} = Keyword.pop(opts, :downloader, downloader())
+    url = encode(url)
+    path = Plug.Upload.random_file!("bow-download")
 
-        name =
-          case Tesla.get_header(env, "content-type") do
-            nil ->
-              base
-
-            content_type ->
-              case MIME.extensions(content_type) do
-                [ext | _] -> rootname(base) <> "." <> ext
-                _ -> base
-              end
-          end
-
-        path = Plug.Upload.random_file!("bow-download")
-
-        case File.write(path, body) do
-          :ok ->
-            {:ok, Bow.new(name: name, path: path)}
-
-          {:error, reason} ->
-            {:error, reason}
-        end
-
-      env ->
-        {:error, env}
+    with {:ok, response} <- downloader.get(url, path, opts),
+         :ok <- check_size(path, opts[:max_size]) do
+      {:ok, Bow.new(name: name(response[:url] || url, response.headers), path: path)}
+    else
+      {:error, reason} ->
+        File.rm(path)
+        {:error, reason}
     end
-  rescue
-    ex in Tesla.Error ->
-      {:error, ex}
+  end
+
+  defp downloader, do: Application.get_env(:bow, :downloader, Bow.Downloader.Httpc)
+
+  defp check_size(_path, nil), do: :ok
+
+  defp check_size(path, max_size) do
+    if File.stat!(path).size > max_size, do: {:error, :max_size_exceeded}, else: :ok
+  end
+
+  defp name(url, headers) do
+    base =
+      case URI.parse(url) do
+        %{path: path} when not is_nil(path) -> Path.basename(path)
+        _ -> ""
+      end
+
+    with {_, content_type} <- List.keyfind(headers, "content-type", 0),
+         [ext | _] <- MIME.extensions(content_type) do
+      rootname(base) <> "." <> ext
+    else
+      _ -> base
+    end
   end
 
   # If path name is malformed, for example looks like this: ".some-data",
@@ -57,11 +69,8 @@ defmodule Bow.Download do
   # name if we cannot read it properly.
   defp rootname(base) do
     case Path.rootname(base) do
-      "" ->
-        Ecto.UUID.generate()
-
-      name ->
-        name
+      "" -> 16 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower)
+      name -> name
     end
   end
 

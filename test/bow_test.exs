@@ -424,7 +424,7 @@ defmodule BowTest do
       def versions(_), do: [:original, :pdf]
 
       def transform(source, target, :original), do: transform_original(source, target)
-      def transform(_source, _target, :pdf), do: %{}.foo + 1
+      def transform(_source, _target, :pdf), do: raise(KeyError, key: :foo, term: %{})
 
       def store_dir(_), do: "raise"
     end
