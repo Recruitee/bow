@@ -363,58 +363,35 @@ defmodule Bow.EctoTest do
   end
 
   describe "Remote file URLs" do
-    defp client do
-      Tesla.client([], fn
-        %{url: "http://example.com/bear.png"} = env ->
-          {:ok,
-           %{
-             env
-             | status: 200,
-               body: File.read!("test/files/bear.png"),
-               headers: [{"Content-Type", "image/png"}]
-           }}
-
-        %{url: "http://example.com"} = env ->
-          {:ok,
-           %{
-             env
-             | status: 200,
-               body: File.read!("test/files/bear.png"),
-               headers: [{"Content-Type", "image/png"}]
-           }}
-
-        env ->
-          {:ok, %{env | status: 404}}
-      end)
-    end
+    @opts [downloader: Bow.TestDownloader]
 
     test "empty params" do
       params = %{}
-      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], client())
+      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], @opts)
       assert user.changes == %{}
     end
 
     test "empty string as param" do
       params = %{"remote_avatar_url" => ""}
-      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], client())
+      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], @opts)
       assert user.changes == %{}
     end
 
     test "invalid URL" do
       params = %{"remote_avatar_url" => "some-ribbish"}
-      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], client())
+      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], @opts)
       assert user.changes == %{}
     end
 
     test "valid URL" do
       params = %{"remote_avatar_url" => "http://example.com/bear.png"}
-      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], client())
+      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], @opts)
       assert %Bow{} = user.changes.avatar
     end
 
     test "valid URL without file path" do
       params = %{"remote_avatar_url" => "http://example.com"}
-      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], client())
+      user = %User{} |> Bow.Ecto.cast_uploads(params, [:avatar], @opts)
       assert %Bow{} = user.changes.avatar
     end
   end
