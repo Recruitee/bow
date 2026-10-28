@@ -144,6 +144,33 @@ defmodule Bow.Uploader do
   @callback versions(file :: Bow.t()) :: [atom]
 
   @doc """
+  Return list of versions that URLs can be built for with `Bow.url/2,3` and `Bow.Ecto.url/3,4`.
+
+  The default implementation returns `versions(file)`, which is correct for most uploaders.
+
+  Override it when the set of URL-addressable versions differs from the versions
+  generated on store:
+
+  - when a transformation returns derived versions (`{:ok, file, next_versions}`)
+    which are not part of `versions/1`
+  - when `filename/2` intentionally aliases two versions to the same stored file
+
+  Requesting a URL for a version outside of this list logs a warning by default,
+  or raises `Bow.Error` when configured with `config :bow, on_undefined_url_version: :raise`.
+
+  Example
+
+      defmodule MyDocumentUploader do
+        # ...
+        def versions(_file), do: [:original, :pdf]
+
+        # :pdf transformation also generates a derived :pdf_thumbnail version
+        def url_versions(file), do: versions(file) ++ [:pdf_thumbnail]
+      end
+  """
+  @callback url_versions(file :: Bow.t()) :: [atom]
+
+  @doc """
   Customize filenames for given version.
 
   The default implementation uses original filename for `:original` version and others are prefixed with `"\#{version}_"`
@@ -253,6 +280,10 @@ defmodule Bow.Uploader do
       # by default always store just the original
       def versions(_), do: [:original]
       defoverridable versions: 1
+
+      # by default URLs can be built for all stored versions
+      def url_versions(file), do: versions(file)
+      defoverridable url_versions: 1
 
       # by default use original file name
       def filename(file, :original), do: file.name
